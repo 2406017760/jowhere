@@ -1,0 +1,26 @@
+---
+import type { CollectionEntry } from 'astro:content';
+interface Props { posts: CollectionEntry<'posts'>[] }
+const { posts } = Astro.props;
+const date = (value: Date) => new Intl.DateTimeFormat('zh-CN', { year:'numeric', month:'short', day:'numeric' }).format(value);
+---
+<section class="post-list" aria-label="文章列表">
+  {posts.map((post) => (
+    <article>
+      <time datetime={post.data.pubDate.toISOString()}>{date(post.data.pubDate)}</time>
+      <h2><a href={`/posts/${post.id}`}>{post.data.title}</a></h2>
+      <p>{post.data.description}</p>
+      <div class="meta">
+        {post.data.tags.map((tag) => <a href={`/tags/${encodeURIComponent(tag)}`}>#{tag}</a>)}
+      </div>
+    </article>
+  ))}
+</section>
+
+<style>
+  .post-list { display:grid; gap:18px; } .post-list article { padding:27px 29px 29px; border:1px solid var(--line); border-radius:8px; background:#fff; box-shadow:0 2px 6px #6a51310a; }
+  time { color:var(--muted); font:12px system-ui, sans-serif; letter-spacing:.03em; }
+  h2 { margin:8px 0 7px; font-size:25px; line-height:1.35; font-weight:600; } h2 a:hover { color:var(--accent); }
+  p { margin:0; color:#59665f; font-size:15px; }
+  .meta { margin-top:13px; display:flex; gap:9px; flex-wrap:wrap; } .meta a { color:var(--accent); font:12px system-ui, sans-serif; } .meta a:hover { text-decoration:underline; }
+</style>

@@ -1,0 +1,18 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+<BaseLayout title="关于">
+  <article class="about prose">
+    <p class="eyebrow">ABOUT</p>
+    <h1 class="page-title">你好，我是你的名字。</h1>
+    <p class="lead">这是一个不追逐信息流的个人角落。</p>
+    <hr />
+    <p>我在这里分享做过的项目、读过的书、走过的路，以及那些还没有想明白的问题。这个网站由 Astro 构建，文章以 Markdown 保存。</p>
+    <h2>找到我</h2>
+    <ul><li><a href="mailto:hello@example.com">hello@example.com</a></li><li><a href="https://github.com/" rel="me">GitHub</a></li></ul>
+    <p class="hint">请在 <code>src/pages/about.astro</code> 中替换这段介绍、邮箱和链接。</p>
+  </article>
+</BaseLayout>
+<style>
+ .about { margin:32px 0 55px; padding:32px 29px; max-width:none; border:1px solid var(--line); border-radius:8px; background:#fff; box-shadow:0 2px 6px #6a51310a; } .lead { margin:12px 0 0; color:var(--muted); font-size:19px; } .about hr { margin:35px 0; border:0; border-top:1px solid var(--line); } .about h2 { margin-top:36px; font-size:22px; } .about li { margin:8px 0; } .about a { color:var(--accent); text-decoration:underline; text-underline-offset:3px; } .hint { margin-top:38px; padding:14px 16px; background:var(--soft); color:var(--muted); font:13px/1.7 system-ui,sans-serif; } code { font-family:ui-monospace,monospace; }
+</style>

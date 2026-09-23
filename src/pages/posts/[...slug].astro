@@ -1,0 +1,23 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+export async function getStaticPaths() {
+  const posts = await getCollection('posts', ({ data }) => !data.draft);
+  return posts.map(post => ({ params: { slug: post.id }, props: { post } }));
+}
+const { post } = Astro.props;
+const { Content } = await render(post);
+const date = new Intl.DateTimeFormat('zh-CN', { year:'numeric', month:'long', day:'numeric' }).format(post.data.pubDate);
+---
+<BaseLayout title={post.data.title} description={post.data.description}>
+  <article class="post prose">
+    <header><p class="eyebrow">{post.data.tags.map(tag => `#${tag}`).join(' · ')}</p><h1>{post.data.title}</h1><time datetime={post.data.pubDate.toISOString()}>{date}</time></header>
+    <Content />
+    <footer class="post-end"><span>完</span><p>谢谢你读到这里。</p></footer>
+  </article>
+</BaseLayout>
+<style is:global>
+ .post { margin:32px 0 55px; padding:42px 40px; max-width:none; border:1px solid var(--line); border-radius:8px; background:#fff; box-shadow:0 2px 6px #6a51310a; } .post header { margin-bottom:41px; } .post h1 { margin:0 0 13px; font-size:39px; line-height:1.32; font-weight:600; } .post header time { color:var(--muted); font:13px system-ui,sans-serif; }
+ .prose :where(p,li) { font-size:17px; } .prose p { margin:0 0 1.45em; } .prose h2 { margin:2em 0 .65em; font-size:26px; } .prose h3 { margin:1.7em 0 .5em; font-size:20px; } .prose a { color:var(--accent); text-decoration:underline; text-underline-offset:3px; } .prose blockquote { margin:1.7em 0; padding:4px 0 4px 20px; border-left:3px solid #bdd8c8; color:#51645a; } .prose code { padding:.12em .35em; background:var(--soft); font:14px ui-monospace,monospace; } .prose pre { overflow:auto; padding:18px; background:#24352c; color:#f3f6f2; } .prose pre code { background:none; color:inherit; padding:0; } .post-end { display:block; margin-top:50px; padding-top:23px; border-top:1px solid var(--line); color:var(--muted); text-align:center; } .post-end span { color:var(--accent); font-size:21px; } .post-end p { margin:3px 0 0; font:13px system-ui,sans-serif; }
+ @media(max-width:560px){ .post { padding:32px 24px; } .post h1 { font-size:31px; } .prose :where(p,li) { font-size:16px; } }
+</style>
