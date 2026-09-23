@@ -38,6 +38,53 @@ tags: [生活, 随笔]
 
 提交到 GitHub 后，Cloudflare Pages 会自动构建和发布。设定 `draft: true` 的文章不会公开。
 
+## 在文章里放图片和视频
+
+图片文件放到 `public/images/posts/`，视频放到 `public/media/`，正文里用**以 `/` 开头的站点根路径**引用。
+可直接参考示例文章 `src/content/posts/images-and-video.md`（打开 `/posts/images-and-video/` 看效果）。
+
+图片：
+
+```md
+![图片说明](/images/posts/weekend-walk-01.jpg)
+```
+
+带图注就用一段原生 HTML：
+
+```html
+<figure>
+  <img src="/images/posts/weekend-walk-01.jpg" alt="图片说明" loading="lazy" />
+  <figcaption>图注写在这里。</figcaption>
+</figure>
+```
+
+想要自动压缩、转 WebP、生成响应式尺寸，就把图片放进 `src/assets/`，用 Astro 的 `Image` 组件：
+
+```astro
+---
+import { Image } from 'astro:assets';
+import photo from '../assets/photo.jpg';
+---
+<Image src={photo} alt="图片说明" widths={[480, 960]} sizes="(max-width: 800px) 100vw, 800px" />
+```
+
+视频用原生 `<video>` 标签（`poster` 是未播放时的封面图）：
+
+```html
+<video src="/media/clip.mp4" poster="/media/clip-poster.jpg" controls preload="metadata" playsinline></video>
+```
+
+长视频建议传到 B 站 / YouTube，用固定 16:9 容器嵌入：
+
+```html
+<figure class="video-embed">
+  <iframe src="//player.bilibili.com/player.html?bvid=视频BV号&autoplay=0" title="视频标题" scrolling="no" frameborder="no" allowfullscreen="true"></iframe>
+  <figcaption>视频说明。</figcaption>
+</figure>
+```
+
+注意：路径必须以 `/` 开头，文件名不要用中文和空格，`alt` 一定要写；体积大的视频不要放进仓库。
+
 ## 上线到 Cloudflare Pages
 
 1. 将本目录推送到新的 GitHub 仓库。

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 480" width="900" height="480" role="img" aria-label="方格纸上的一段手写计划清单">
+  <defs>
+    <pattern id="grid2" width="36" height="36" patternUnits="userSpaceOnUse">
+      <path d="M36 0H0V36" fill="none" stroke="#c9a885" stroke-opacity="0.4" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="900" height="480" fill="#fffdf9"/>
+  <rect width="900" height="480" fill="url(#grid2)"/>
+  <g font-family="'LXGW WenKai GB','KaiTi',serif" fill="#463d32">
+    <text x="70" y="96" font-size="34" letter-spacing="2">写一篇文章的四个格子</text>
+    <g font-size="26" fill="#3f4a42">
+      <text x="86" y="170">1. 先写下今天真正在意的一件事</text>
+      <text x="86" y="228">2. 补上当时的天气、声音和味道</text>
+      <text x="86" y="286">3. 删掉所有不必要的形容词</text>
+      <text x="86" y="344">4. 最后再读一遍，只留一句最想说的</text>
+    </g>
+  </g>
+  <g stroke="#a45f28" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.75">
+    <path d="M84 146c22-8 44-8 66 0"/>
+    <path d="M84 204c22-8 44-8 66 0"/>
+  </g>
+  <g fill="none" stroke="#8c9c86" stroke-width="3" stroke-linecap="round">
+    <path d="M78 320l10 12 22-28"/>
+    <path d="M78 378l10 12 22-28"/>
+  </g>
+</svg>

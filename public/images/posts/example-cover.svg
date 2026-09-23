@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" width="1200" height="675" role="img" aria-label="纸上花园：暖米色方格纸背景与一枚印章">
+  <defs>
+    <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+      <path d="M50 0H0V50" fill="none" stroke="#dbba98" stroke-opacity="0.35" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="675" fill="#fbfaf7"/>
+  <rect width="1200" height="675" fill="url(#grid)"/>
+  <g opacity="0.9">
+    <circle cx="860" cy="250" r="120" fill="#f4e7d5"/>
+    <circle cx="860" cy="250" r="86" fill="none" stroke="#c8a179" stroke-width="3"/>
+    <circle cx="860" cy="250" r="22" fill="#a45f28" opacity="0.75"/>
+    <path d="M700 430c40-60 96-92 160-96" fill="none" stroke="#8c9c86" stroke-width="4" stroke-linecap="round"/>
+    <path d="M742 372c-16-30-8-62 22-84 8 30 4 58-22 84z" fill="#b6c9ac"/>
+    <path d="M812 340c-20-26-18-58 8-84 12 28 12 56-8 84z" fill="#9fb894"/>
+  </g>
+  <g fill="#463d32" font-family="'LXGW WenKai GB','KaiTi',serif">
+    <text x="110" y="290" font-size="76" letter-spacing="6">纸上花园</text>
+    <text x="112" y="352" font-size="26" fill="#897d6e" letter-spacing="3">记录思考、生活与正在发生的事</text>
+  </g>
+  <g stroke="#a45f28" fill="none" stroke-width="3">
+    <rect x="108" y="220" width="132" height="132" rx="8" transform="rotate(-6 174 286)" opacity="0.5"/>
+  </g>
+  <text x="110" y="560" font-size="20" fill="#897d6e" font-family="system-ui,sans-serif" letter-spacing="4">PAPER GARDEN · 2026</text>
+</svg>
