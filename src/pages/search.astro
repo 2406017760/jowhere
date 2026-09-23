@@ -1,0 +1,314 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+<BaseLayout title="搜索" description="在纸上花园中搜索文章。">
+  <section class="search-head" data-pagefind-ignore>
+    <p class="eyebrow">SEARCH</p>
+    <h1 class="page-title">搜索文章</h1>
+    <form class="search-form" role="search" action="/search" method="get" data-search-page-form>
+      <input type="search" name="q" autocomplete="off" placeholder="输入关键词，例如：随笔、花园…" aria-label="搜索文章" data-search-page-input />
+      <button type="submit">搜索</button>
+    </form>
+    <p class="search-status" data-search-status role="status" aria-live="polite"></p>
+  </section>
+  <section class="post-list" data-search-results aria-label="搜索结果" data-pagefind-ignore></section>
+</BaseLayout>
+<script is:inline>
+  (() => {
+    const form = document.querySelector('[data-search-page-form]');
+    const input = document.querySelector('[data-search-page-input]');
+    const status = document.querySelector('[data-search-status]');
+    const list = document.querySelector('[data-search-results]');
+    if (!form || !input || !status || !list) return;
+
+    let pagefindPromise;
+    const loadPagefind = () => {
+      if (!pagefindPromise) {
+        pagefindPromise = import(/* @vite-ignore */ '/pagefind/pagefind.js')
+          .then((module) => {
+            if (typeof module.options === 'function') module.options({ basePath: '/pagefind/' });
+            return module;
+          })
+          .catch((error) => { pagefindPromise = undefined; throw error; });
+      }
+      return pagefindPromise;
+    };
+
+    const MAX_EXCERPT = 90;
+    const LEAD_IN = 24;
+    const SNIPPET_WIDTH = 110;
+    const SITE_PREFIX = /^(纸上花园|PAPER GARDEN)\s*·\s*/;
+
+    const escapeHtml = (value) => value
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    const termsOf = (query) => (query || '').split(/\s+/).map((term) => term.trim()).filter(Boolean);
+
+    // Match the whole query first (more precise), then fall back to single terms.
+    const patternsFor = (query) => {
+      const terms = termsOf(query);
+      const patterns = [];
+      if (terms.length > 1) patterns.push(new RegExp(`(${escapeRegExp(terms.join(' '))})`, 'gi'));
+      patterns.push(new RegExp(`(${terms.map(escapeRegExp).join('|')})`, 'gi'));
+      return patterns;
+    };
+
+    const countMatches = (text, query) => {
+      let count = 0;
+      patternsFor(query).forEach((pattern) => {
+        const found = text.match(pattern);
+        if (found) count = Math.max(count, found.length);
+      });
+      return count;
+    };
+
+    // Wrap the query terms in <mark>; returns null when nothing matches.
+    const markText = (text, query) => {
+      const escaped = escapeHtml(text);
+      for (const pattern of patternsFor(query)) {
+        const html = escaped.replace(pattern, '<mark>$1</mark>');
+        if (html !== escaped) return html;
+      }
+      return null;
+    };
+
+    const testPattern = (query) => {
+      const terms = termsOf(query);
+      if (!terms.length) return null;
+      return new RegExp(terms.map(escapeRegExp).join('|'), 'i');
+    };
+
+    const matchIndexOf = (text, query) => {
+      // Match the whole query first, else the earliest single term.
+      const phrase = query.trim();
+      if (phrase) {
+        const at = text.toLowerCase().indexOf(phrase.toLowerCase());
+        if (at > -1) return at;
+      }
+      const pattern = testPattern(query);
+      const found = pattern && pattern.exec(text);
+      return found ? found.index : -1;
+    };
+
+    // Window the text around the match so the highlighted term is always visible
+    // instead of being cut off by the length cap.
+    const windowAroundMatch = (text, query) => {
+      const at = matchIndexOf(text, query);
+      if (at < 0) {
+        return text.length > MAX_EXCERPT ? `${text.slice(0, MAX_EXCERPT).trim()}…` : text;
+      }
+      let start = Math.max(0, at - LEAD_IN);
+      let end = Math.min(text.length, start + SNIPPET_WIDTH);
+      start = Math.max(0, end - SNIPPET_WIDTH);
+      return `${start > 0 ? '…' : ''}${text.slice(start, end).trim()}${end < text.length ? '…' : ''}`;
+    };
+
+    // Mark one piece of text, windowed around its own match.
+    const marked = (text, query) => {
+      if (!text) return '';
+      const windowed = windowAroundMatch(text, query);
+      return markText(windowed, query) || escapeHtml(windowed);
+    };
+
+    // Build the card description: the post description, plus the matching
+    // snippet when the description itself does not show the search text. Each
+    // part is windowed separately so no highlight is ever truncated away.
+    const buildExcerpt = (description, snippet, query, useSnippet) => {
+      if (!useSnippet) return marked(description, query) || escapeHtml(description);
+      const lead = marked(description, query);
+      const tail = marked(snippet, query);
+      if (lead && tail) return `${lead}… ${tail}`;
+      return lead || tail || escapeHtml(description);
+    };
+
+    // Pagefind excerpts start with page furniture (site name, tags, title, date).
+    // Cut everything up to and including the article title so the description
+    // reads like the homepage cards.
+    const trimToTitle = (text, title, sitePrefix) => {
+      const plainTitle = (title || '').replace(/\s+/g, '');
+      if (!plainTitle) return text;
+
+      // Collapse whitespace while remembering where each character came from, so
+      // dropping the prefix never leaves a half-word behind.
+      let collapsed = '';
+      const map = [];
+      for (let i = 0; i < text.length; i++) {
+        if (/\s/.test(text[i])) continue;
+        collapsed += text[i];
+        map.push(i);
+      }
+
+      const needle = plainTitle.toLowerCase();
+      let at = collapsed.toLowerCase().indexOf(needle);
+      if (at === 0 && sitePrefix) {
+        const afterPrefix = collapsed.slice(sitePrefix.length).toLowerCase();
+        if (afterPrefix.startsWith(needle)) at = sitePrefix.length;
+      }
+      if (at < 0) return text;
+
+      const endIndex = at + plainTitle.length - 1;
+      const end = map[endIndex];
+      return end === undefined ? text : text.slice(end + 1).trim();
+    };
+
+    const cleanText = (raw, title) => {
+      // Keep words joined across <mark> wrappers, then drop any other markup.
+      const plain = (raw || '').replace(/<\/?mark[^>]*>/gi, '').replace(/<[^>]*>/g, ' ');
+      let text = plain.replace(/\s+/g, ' ').trim();
+      const sitePrefix = (text.match(SITE_PREFIX) || [''])[0].replace(/\s+/g, '');
+      text = text.replace(SITE_PREFIX, '').trim();
+      text = trimToTitle(text, title, sitePrefix);
+      text = text.replace(/^[·.\-—\s]+/, '');
+      text = text.replace(/^(?:#\S+\s*[·.]?\s*)*/, '').trim();
+      text = text.replace(/^\d{4}年\d{1,2}月\d{1,2}日\s*[·.]?\s*/, '').trim();
+      return text;
+    };
+
+    // Highlight the matched terms in a title (returns HTML, or null if no match).
+    const markTitle = (title, query) => markText(title, query);
+
+    const render = (items) => {
+      const frag = document.createDocumentFragment();
+      items.forEach((item) => {
+        const card = document.createElement('article');
+
+        const time = document.createElement('time');
+        time.dateTime = item.date;
+        time.textContent = item.displayDate;
+
+        const heading = document.createElement('h2');
+        const link = document.createElement('a');
+        link.href = item.url;
+        // Highlight the matched terms in the title too.
+        link.innerHTML = markTitle(item.title, item.query) || escapeHtml(item.title);
+        heading.append(link);
+
+        const description = document.createElement('p');
+        description.innerHTML = item.excerpt;
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        item.tags.forEach((tag) => {
+          const anchor = document.createElement('a');
+          anchor.href = `/tags/${encodeURIComponent(tag)}/`;
+          anchor.textContent = `#${tag}`;
+          meta.append(anchor);
+        });
+
+        card.append(time, heading, description);
+        if (item.tags.length) card.append(meta);
+        frag.append(card);
+      });
+      list.replaceChildren(frag);
+    };
+
+    const run = async (rawQuery) => {
+      const query = (rawQuery || '').trim();
+      input.value = query;
+      if (!query) {
+        status.textContent = '输入关键词开始搜索。';
+        list.replaceChildren();
+        return;
+      }
+
+      status.textContent = '正在搜索…';
+      list.replaceChildren();
+
+      let pagefind;
+      try {
+        pagefind = await loadPagefind();
+        if (typeof pagefind.init === 'function') await pagefind.init();
+      } catch {
+        status.textContent = '搜索索引尚未生成，请先运行 npm run build。';
+        return;
+      }
+
+      let response;
+      try {
+        response = await pagefind.search(query);
+      } catch (error) {
+        console.error('[search]', error);
+        status.textContent = '搜索出错了，请刷新页面后重试。';
+        return;
+      }
+
+      const results = response.results || [];
+      const items = [];
+      for (const result of results) {
+        let data;
+        try { data = await result.data(); } catch { continue; }
+        const match = /^\/posts\/([^/?#]+)/.exec(data.url || '');
+        if (!match) continue;
+        const meta = data.meta || {};
+        const title = meta.title || decodeURIComponent(match[1]);
+        const date = meta.pubDate || '';
+        // Prefer the post description (clean, like the homepage cards). Validate
+        // against the full snippet, not a truncated one, or matches past the cap
+        // would be listed without any visible search text.
+        const description = (meta.description || '').trim();
+        const snippet = cleanText(data.excerpt, title);
+        const titleHits = countMatches(title, query);
+        const descriptionHits = description ? countMatches(description, query) : 0;
+        const snippetHits = snippet ? countMatches(snippet, query) : 0;
+        if (!titleHits && !descriptionHits && !snippetHits) continue;
+        items.push({
+          url: data.url,
+          title,
+          query,
+          date,
+          displayDate: date ? new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(date)) : '',
+          tags: String(meta.tags || '').split(/\s+/).filter(Boolean),
+          excerpt: buildExcerpt(description, snippet, query, !descriptionHits && snippetHits > 0),
+        });
+      }
+
+      if (!items.length) {
+        status.textContent = `没有找到与“${query}”相关的文章。`;
+        return;
+      }
+
+      // Same order as the homepage and archive: newest first.
+      items.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+      status.textContent = `找到 ${items.length} 篇与“${query}”相关的文章。`;
+      render(items);
+    };
+
+    form.addEventListener('submit', (event) => {
+      const query = input.value.trim();
+      event.preventDefault();
+      if (!query) { input.focus(); return; }
+      const url = `/search?q=${encodeURIComponent(query)}`;
+      if (url === `${window.location.pathname}${window.location.search}`) run(query);
+      else window.location.assign(url);
+    });
+
+    const initial = new URLSearchParams(window.location.search).get('q');
+    if (initial) run(initial);
+    else status.textContent = '输入关键词开始搜索。';
+    input.focus();
+  })();
+</script>
+<style>
+  .search-head { margin:32px 0 18px; padding:31px 29px; border:1px solid var(--line); border-radius:8px; background:#fff; box-shadow:0 2px 6px #6a51310a; }
+  .search-form { display:flex; gap:9px; margin:22px 0 0; }
+  .search-form input { min-width:0; flex:1; height:40px; padding:0 13px; border:1px solid #d7b69a; border-radius:8px; outline:0; background:#fff; color:var(--ink); font:15px 'LXGW WenKai GB',serif; }
+  .search-form input:focus { border-color:var(--accent); box-shadow:0 0 0 3px #a45f2820; }
+  .search-form input::-webkit-search-cancel-button { -webkit-appearance:none; appearance:none; }
+  .search-form button { height:40px; padding:0 19px; border:0; border-radius:8px; background:var(--accent); color:#fff; font:15px 'LXGW WenKai GB',sans-serif; cursor:pointer; }
+  .search-form button:hover { background:#8f5222; }
+  .search-status { margin:19px 0 0; color:var(--muted); font:13px system-ui,sans-serif; }
+  @media(max-width:560px) { .search-head { padding:26px 20px 28px; } .search-form { flex-wrap:wrap; } .search-form input { flex:1 1 100%; } .search-form button { width:100%; } }
+</style>
+<style is:global>
+  /* Same article-card styling as the homepage list (src/components/PostList.astro). */
+  .post-list { display:grid; gap:18px; } .post-list article { padding:27px 29px 29px; border:1px solid var(--line); border-radius:8px; background:#fff; box-shadow:0 2px 6px #6a51310a; }
+  .post-list time { color:var(--muted); font:12px system-ui, sans-serif; letter-spacing:.03em; }
+  .post-list h2 { margin:8px 0 7px; font-size:25px; line-height:1.35; font-weight:600; } .post-list h2 a:hover { color:var(--accent); }
+  .post-list p { margin:0; color:#59665f; font-size:15px; }
+  .post-list mark { padding:0 2px; border-radius:2px; background:#f7e6c8; color:inherit; }
+  .post-list h2 a:hover mark { background:#f0d9ae; }
+  .post-list .meta { margin-top:13px; display:flex; gap:9px; flex-wrap:wrap; } .post-list .meta a { color:var(--accent); font:12px system-ui, sans-serif; } .post-list .meta a:hover { text-decoration:underline; }
+  @media(max-width:560px) { .post-list h2 { font-size:22px; } }
+</style>

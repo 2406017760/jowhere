@@ -11,6 +11,9 @@ const date = new Intl.DateTimeFormat('zh-CN', { year:'numeric', month:'long', da
 ---
 <BaseLayout title={post.data.title} description={post.data.description}>
   <article class="post prose">
+    <span hidden data-pagefind-meta="pubDate" data-pagefind-ignore>{post.data.pubDate.toISOString().slice(0, 10)}</span>
+    <span hidden data-pagefind-meta="tags" data-pagefind-ignore>{post.data.tags.join(' ')}</span>
+    <span hidden data-pagefind-meta="description" data-pagefind-ignore>{post.data.description}</span>
     <header><p class="eyebrow">{post.data.tags.map(tag => `#${tag}`).join(' · ')}</p><h1>{post.data.title}</h1><time datetime={post.data.pubDate.toISOString()}>{date}</time></header>
     <Content />
     <footer class="post-end"><span>完</span><p>谢谢你读到这里。</p></footer>

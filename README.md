@@ -17,6 +17,10 @@ npm run dev
 npm run build
 ```
 
+搜索功能（Pagefind）读取的是构建产物：`npm run build` 会在构建完成后生成索引，
+并同时复制到 `public/pagefind/`，所以 `npm run dev` 也能搜索。首次克隆仓库后请先执行
+一次 `npm run build`；之后新增或修改文章时，再跑一次 `npm run build` 刷新索引即可。
+
 ## 写文章
 
 在 `src/content/posts/` 新建一个 `.md` 文件，例如：
@@ -55,7 +59,7 @@ tags: [生活, 随笔]
 - 首页文章流、文章详情页、归档、标签页、关于页
 - RSS：`/rss.xml`
 - 响应式阅读排版、SEO 描述和 sitemap
-- Pagefind 静态全文搜索：点击导航栏“搜索”或按 `Ctrl/⌘ + K`
+- Pagefind 静态全文搜索：点击导航栏“搜索”（或按 `Ctrl/⌘ + K`）输入关键词，点搜索按钮或回车后进入 `/search?q=…` 结果页；结果页可按日期、标签查看匹配到的文章，并支持关键词高亮
 - Markdown 内容管理与草稿开关
 
 ## 字体与背景
