@@ -108,18 +108,82 @@ const configured = Boolean(envId && envId.trim());
   .comments-setup { margin: 0; padding: 15px 17px; border: 1px dashed #d7b69a; border-radius: 8px; background: var(--soft); color: var(--muted); font: 14px/1.7 system-ui, sans-serif; }
   .comments-setup code { padding: .12em .35em; background: #fff; font: 13px ui-monospace, monospace; }
 
-  /* Twikoo 自带样式是通用蓝紫配色，这里调成站点配色。 */
-  .comments :global(.tk-comments-title),
-  .comments :global(.tk-comment .tk-nick) { font-family: 'LXGW WenKai GB', serif; }
-  .comments :global(.tk-input) { border-color: #e3d8c9; }
-  .comments :global(.tk-input:focus) { border-color: #a45f28; box-shadow: 0 0 0 3px #a45f2820; }
-  .comments :global(.tk-meta-input .el-input__inner) { font-family: 'LXGW WenKai GB', serif; }
-  .comments :global(.tk-submit .el-button--primary),
-  .comments :global(.tk-row .el-button--primary) { border-color: #a45f28; background-color: #a45f28; }
-  .comments :global(.tk-submit .el-button--primary:hover),
-  .comments :global(.tk-row .el-button--primary:hover) { border-color: #8f5222; background-color: #8f5222; }
-  .comments :global(.tk-action-icon) { color: #897d6e; }
-  .comments :global(.tk-action-icon:hover) { color: #a45f28; }
-  .comments :global(.tk-admin) { color: #897d6e; }
-  .comments :global(.tk-required-hint) { display: block; margin-top: 2px; color: #a45f28; font: 12px system-ui, sans-serif; }
+  /* Twikoo 自带样式是通用蓝紫配色，这里整体调成站点的暖纸配色。 */
+  .comments :global(.twikoo) { font-family: 'LXGW WenKai GB', 'Klee One', 'KaiTi', serif; }
+
+  /* 标题：跟正文标题同风格，加一道短装饰线 */
+  .comments :global(.tk-comments-title) { display: block; margin: 0 0 18px; font-size: 19px; font-weight: 600; color: var(--ink); }
+  .comments :global(.tk-comments-title)::after { display: block; width: 34px; height: 2px; margin-top: 9px; background: var(--accent); content: ''; }
+
+  /* 输入框：去掉 Twikoo 的空值红框（.tk-input input:invalid），统一成奶油底 */
+  .comments :global(.tk-input__inner),
+  .comments :global(.tk-textarea__inner) {
+    border: 1px solid #e3d8c9; border-radius: 6px; background: #fffdfa;
+    color: var(--ink); font-family: 'LXGW WenKai GB', 'Klee One', serif; font-size: 14px;
+  }
+  .comments :global(.tk-input input:invalid),
+  .comments :global(.tk-input__inner:invalid) { border-color: #e3d8c9; box-shadow: none; }
+  .comments :global(.tk-input__inner:focus),
+  .comments :global(.tk-textarea__inner:focus) { border-color: var(--accent); box-shadow: 0 0 0 3px #a45f2820; }
+  .comments :global(.tk-input__inner::placeholder),
+  .comments :global(.tk-textarea__inner::placeholder) { color: #b3a597; }
+  .comments :global(.tk-textarea__inner) { min-height: 84px; line-height: 1.75; }
+
+  /* 昵称/邮箱/网址：前缀做成柔和的色块，字段之间留出呼吸感 */
+  .comments :global(.tk-meta-input) { gap: 10px; }
+  .comments :global(.tk-meta-input__item) { margin: 0; }
+  .comments :global(.tk-input-group__prepend) {
+    padding: 0 11px; border: 1px solid #e3d8c9; border-right: 0; border-radius: 6px 0 0 6px;
+    background: var(--soft); color: #7d7062; font-size: 13px; white-space: nowrap;
+  }
+  .comments :global(.tk-input--group .tk-input__inner) { border-radius: 0 6px 6px 0; }
+
+  /* 提示文字（请填写昵称/邮箱）会撑破窄列，改为不占位、只在提交后才由浏览器提示 */
+  .comments :global(.tk-required-hint) { display: none; }
+
+  /* 底部：字数、表情、预览、发送 */
+  .comments :global(.tk-row) { margin-top: 12px; }
+  .comments :global(.tk-input__count) { color: #b3a597; font: 12px system-ui, sans-serif; }
+  .comments :global(.tk-send) { padding: 0 20px; min-height: 34px; font-family: 'LXGW WenKai GB', serif; }
+  /* 发送按钮：Twikoo 同时带 tk-button--small，所以要用 .tk-button.tk-button--primary 提权 */
+  .comments :global(.tk-button.tk-button--primary) { border-color: var(--accent); background-color: var(--accent); color: #fff; }
+  .comments :global(.tk-button.tk-button--primary:hover) { border-color: #8f5222; background-color: #8f5222; }
+  /* 未填内容时发送按钮是禁用态，Twikoo 默认会露出 Element Plus 的蓝色 */
+  .comments :global(.tk-button.tk-button--primary.is-disabled),
+  .comments :global(.tk-button.tk-button--primary.is-disabled:hover) { border-color: #eddfcd; background-color: #eddfcd; color: #a2937f; }
+  /* 次要按钮（预览等）才是白底描边 */
+  .comments :global(.tk-button.tk-button--small:not(.tk-button--primary)) { border: 1px solid #e3d8c9; border-radius: 6px; background: #fff; color: var(--ink); }
+  .comments :global(.tk-button.tk-button--small:not(.tk-button--primary):hover) { border-color: var(--accent); color: var(--accent); }
+  .comments :global(.tk-action-icon),
+  .comments :global(.tk-submit-action-icon) { color: #9c8f80; }
+  .comments :global(.tk-action-icon:hover),
+  .comments :global(.tk-submit-action-icon:hover) { color: var(--accent); }
+  .comments :global(.tk-icon) { fill: currentColor; }
+
+  /* 评论区列表：每条之间用浅虚线分隔，跟归档页一致 */
+  .comments :global(.tk-comment) { padding: 0; }
+  .comments :global(.tk-comment + .tk-comment) { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); }
+  .comments :global(.tk-comments-container) { margin-top: 6px; }
+  .comments :global(.tk-avatar) { width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 50%; background: var(--soft); }
+  .comments :global(.tk-avatar-img) { color: #b3a597; }
+  .comments :global(.tk-avatar-img svg) { width: 20px; height: 20px; }
+  /* 提交区的头像会跟表单挤在一行导致顶端不齐，隐藏它；评论列表里的头像保留 */
+  .comments :global(.tk-row > .tk-avatar) { display: none; }
+  .comments :global(.tk-row) :global(.tk-col) { flex: 1; }
+  .comments :global(.tk-nick) { font-weight: 600; }
+  .comments :global(.tk-nick-link:hover strong) { color: var(--accent); }
+  .comments :global(.tk-time),
+  .comments :global(.tk-comments-count) { color: var(--muted); font: 12px system-ui, sans-serif; }
+  .comments :global(.tk-content) { margin-top: 5px; font-size: 15px; line-height: 1.75; }
+  .comments :global(.tk-tag) { border: 0; border-radius: 4px; background: var(--soft); color: var(--accent); font-size: 11px; padding: 0 5px; }
+  .comments :global(.tk-admin) { color: var(--muted); font: 12px system-ui, sans-serif; }
+  .comments :global(.tk-footer) { padding-top: 14px; margin-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font: 12px system-ui, sans-serif; }
+  .comments :global(.tk-footer a) { color: var(--muted); } .comments :global(.tk-footer a:hover) { color: var(--accent); }
+
+  /* 评论区里的搜索框和分页 */
+  .comments :global(.tk-comments-actions) { gap: 8px; }
+  .comments :global(.tk-comments-search .tk-input__inner) { border-radius: 999px; }
+  .comments :global(.tk-pagination) { margin-top: 16px; font: 13px system-ui, sans-serif; }
+  .comments :global(.tk-pagination button) { border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); }
+  .comments :global(.tk-pagination button:disabled) { color: #c3b8ab; }
 </style>
