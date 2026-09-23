@@ -94,12 +94,62 @@ import photo from '../assets/photo.jpg';
 
 域名的 DNS 推荐托管到 Cloudflare。无需购买 VPS 或维护数据库。
 
+## 开启评论（Twikoo）
+
+评论区默认是关闭的，文章页会显示一段配置提示。开启只需两步：
+
+**第 1 步：部署 Twikoo 服务端（Cloudflare Workers + D1）**
+
+服务端代码放在本机的 `twikoo-server/` 目录（已按官方要求裁剪好打包体积，并从 `wrangler.toml` 去掉了用不到的 R2 绑定）。该目录**不纳入博客仓库**，需要单独推送到自己的仓库保存。
+
+```powershell
+cd twikoo-server
+npm install
+node scripts/prune-for-workers.mjs     # 每次 npm install 后都要跑
+npx wrangler login                     # 浏览器授权登录 Cloudflare
+npx wrangler d1 create twikoo          # 建库，把输出的 database_id 填进 wrangler.toml
+npx wrangler d1 execute twikoo --remote --file=./schema.sql --config wrangler.toml
+npx wrangler deploy --minify --config wrangler.toml
+```
+
+部署完成后会得到一个地址，例如 `https://twikoo-cloudflare.你的用户名.workers.dev`。完整说明和可选配置见 `twikoo-server/DEPLOY.md`。
+
+*（也可以换用 Vercel + MongoDB 方案，见 [Twikoo 官方文档](https://twikoo.js.org/quick-start.html)；Workers 方案的冷启动更快。）*
+
+**第 2 步：把地址填进配置**
+
+编辑 `src/config.ts`：
+
+```ts
+export const comment = {
+  envId: 'https://twikoo-cloudflare.你的用户名.workers.dev', // ← 粘这里
+  ...
+};
+```
+
+保存后评论区自动出现，无需改其它文件。想临时关闭评论，把 `envId` 清空即可。
+
+**关于前端脚本**：仓库自带一份 Twikoo 浏览器包（`public/vendor/twikoo/twikoo.min.js`，v2.0.8），不走 CDN，国内访问更稳。想升级版本：
+
+```bash
+npm pack twikoo && tar -xzf twikoo-*.tgz && cp package/dist/twikoo.min.js public/vendor/twikoo/
+```
+
+也可以把 `comment.clientPath` 改成 CDN 地址。
+
+**表单规则**：昵称必填、邮箱必填（不会公开显示）、网址选填。组件会在 Twikoo 渲染出表单后自动打上这些校验。
+
+> ⚠️ Cloudflare Workers 版的 Twikoo **服务端不校验必填字段**（空昵称会存成「匿名」，空邮箱也会保存），所以这几条规则实际由前端把关。如果需要更硬的防护，建议在 Twikoo 管理面板里开启 **Cloudflare Turnstile 验证码**和评论频率限制。
+
+**评论头像是 Gravatar**：读者用邮箱评论时，头像是该邮箱在 [gravatar.com](https://gravatar.com) 注册的图；没注册就显示默认头像。国内访问慢的话，可以在 Twikoo 管理面板把 `GRAVATAR_CDN` 改成 `cravatar.cn`。
+
 ## 要改的内容
 
 - 站点名字与基础说明：`src/layouts/BaseLayout.astro`
 - 个人介绍与联系方式：`src/pages/about.astro`
 - 主题颜色与排版：`src/layouts/BaseLayout.astro` 底部的全局样式
 - 示例文章：`src/content/posts/`
+- 评论服务地址：`src/config.ts`
 
 ## 当前功能
 
@@ -107,7 +157,13 @@ import photo from '../assets/photo.jpg';
 - RSS：`/rss.xml`
 - 响应式阅读排版、SEO 描述和 sitemap
 - Pagefind 静态全文搜索：点击导航栏“搜索”（或按 `Ctrl/⌘ + K`）输入关键词，点搜索按钮或回车后进入 `/search?q=…` 结果页；结果页可按日期、标签查看匹配到的文章，并支持关键词高亮
+- 文章内插图与视频（Markdown 图片、`<video>`、B 站/YouTube 嵌入）
+- Twikoo 评论：昵称、邮箱必填，网址选填（需自行部署 Twikoo 服务端）
 - Markdown 内容管理与草稿开关
+
+## 第三方资源
+
+- **Twikoo**（MIT License）：评论前端包内置于 `public/vendor/twikoo/`，版权与许可见同目录 `LICENSE`。
 
 ## 字体与背景
 

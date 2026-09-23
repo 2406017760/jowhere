@@ -9,3 +9,6 @@ dist/
 # `astro dev` can serve search too.
 public/pagefind/
 .chrome-*/
+
+# 评论服务端（独立的 Workers/D1 项目，单独推到自己的仓库）
+twikoo-server/

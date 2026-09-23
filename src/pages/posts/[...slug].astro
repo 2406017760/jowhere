@@ -1,6 +1,7 @@
 ---
 import { getCollection, render } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import Comments from '../../components/Comments.astro';
 export async function getStaticPaths() {
   const posts = await getCollection('posts', ({ data }) => !data.draft);
   return posts.map(post => ({ params: { slug: post.id }, props: { post } }));
@@ -16,6 +17,7 @@ const date = new Intl.DateTimeFormat('zh-CN', { year:'numeric', month:'long', da
     <span hidden data-pagefind-meta="description" data-pagefind-ignore>{post.data.description}</span>
     <header><p class="eyebrow">{post.data.tags.map(tag => `#${tag}`).join(' · ')}</p><h1>{post.data.title}</h1><time datetime={post.data.pubDate.toISOString()}>{date}</time></header>
     <Content />
+    <Comments />
     <footer class="post-end"><span>完</span><p>谢谢你读到这里。</p></footer>
   </article>
 </BaseLayout>

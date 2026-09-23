@@ -1,0 +1,125 @@
+---
+import { comment } from '../config';
+
+interface Props {
+  envId?: string;
+  path?: string;
+}
+const { envId = comment.envId, path = Astro.url.pathname } = Astro.props;
+const configured = Boolean(envId && envId.trim());
+---
+<div class="comments" data-pagefind-ignore data-comment-root data-env-id={envId} data-comment-path={path} data-comment-client={comment.clientPath} data-comment-lang={comment.lang}>
+  <h2 class="comments-title">评论</h2>
+  {configured
+    ? <div id="twikoo" class="comments-body"></div>
+    : <p class="comments-setup">评论服务尚未配置：在 <code>src/config.ts</code> 里把 <code>comment.envId</code> 填成你部署好的 Twikoo 云函数地址即可。</p>}
+</div>
+
+<script is:inline>
+  (() => {
+    const root = document.querySelector('[data-comment-root]');
+    if (!root) return;
+    const envId = (root.dataset.envId || '').trim();
+
+    // Twikoo 默认昵称、邮箱、网址都必填；这里做成昵称必填、邮箱必填、网址选填。
+    // 真实结构是 Element Plus 的包装：.tk-input > .el-input__inner，标签是
+    // .tk-input-group__prepend 里的纯文本，字段实例上带有 name/type 属性。
+    const FIELD_RULES = [
+      { name: 'nick', hint: '请填写昵称', type: 'text', autocomplete: 'nickname' },
+      { name: 'mail', hint: '请填写邮箱（不会公开）', type: 'email', autocomplete: 'email' },
+      { name: 'link', hint: '', type: 'url', autocomplete: 'url' },
+    ];
+
+    const applyRequiredRule = () => {
+      FIELD_RULES.forEach((rule) => {
+        const input = root.querySelector(`.tk-meta-input input[name="${rule.name}"]`)
+          || root.querySelector(`.el-input__inner[name="${rule.name}"]`);
+        if (!input || input.dataset.ruleApplied === 'v1') return;
+        const item = input.closest('.tk-meta-input__item') || input.closest('.tk-input') || input.parentElement;
+        if (!item) return;
+        input.dataset.ruleApplied = 'v1';
+
+        const required = Boolean(rule.hint);
+        input.required = required;
+        input.type = rule.type;
+        input.autocomplete = rule.autocomplete;
+
+        const label = item.querySelector('.tk-input-group__prepend') || item.querySelector('label');
+        if (label) label.append(required ? '（必填）' : '（选填）');
+
+        if (!required) return;
+        const hint = document.createElement('span');
+        hint.className = 'tk-required-hint';
+        hint.textContent = rule.hint;
+        item.append(hint);
+        input.addEventListener('input', () => {
+          hint.textContent = input.value.trim() ? '' : rule.hint;
+        });
+      });
+    };
+
+    const mount = () => {
+      if (!window.twikoo) return;
+      window.twikoo.init({
+        envId,
+        el: '#twikoo',
+        path: root.dataset.commentPath,
+        lang: root.dataset.commentLang,
+      });
+      // 评论区是异步渲染的，轮询到三个输入框都出现后补上校验规则。
+      let tries = 0;
+      const timer = setInterval(() => {
+        applyRequiredRule();
+        const ready = FIELD_RULES.every((rule) => root.querySelector(`input[name="${rule.name}"]`));
+        if (ready || ++tries > 150) clearInterval(timer);
+      }, 200);
+    };
+
+    const load = () => {
+      const src = root.dataset.commentClient;
+      const body = root.querySelector('.comments-body');
+      const existing = document.querySelector('script[data-comment-client]');
+      if (existing) { mount(); return; }
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = true;
+      script.dataset.commentClient = 'true';
+      script.addEventListener('load', mount);
+      script.addEventListener('error', () => {
+        if (body) body.innerHTML = '<p class="comments-setup">评论组件加载失败，请检查 comment.clientPath 是否可访问。</p>';
+      });
+      document.head.appendChild(script);
+    };
+
+    // 滚到评论区附近再加载，避免拖慢文章首屏。
+    if (!('IntersectionObserver' in window)) { load(); return; }
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      observer.disconnect();
+      load();
+    }, { rootMargin: '300px 0px' });
+    observer.observe(root);
+  })();
+</script>
+
+<style>
+  .comments { margin-top: 44px; padding-top: 26px; border-top: 1px solid var(--line); }
+  .comments-title { margin: 0 0 16px; font-size: 22px; font-weight: 600; }
+  .comments-setup { margin: 0; padding: 15px 17px; border: 1px dashed #d7b69a; border-radius: 8px; background: var(--soft); color: var(--muted); font: 14px/1.7 system-ui, sans-serif; }
+  .comments-setup code { padding: .12em .35em; background: #fff; font: 13px ui-monospace, monospace; }
+
+  /* Twikoo 自带样式是通用蓝紫配色，这里调成站点配色。 */
+  .comments :global(.tk-comments-title),
+  .comments :global(.tk-comment .tk-nick) { font-family: 'LXGW WenKai GB', serif; }
+  .comments :global(.tk-input) { border-color: #e3d8c9; }
+  .comments :global(.tk-input:focus) { border-color: #a45f28; box-shadow: 0 0 0 3px #a45f2820; }
+  .comments :global(.tk-meta-input .el-input__inner) { font-family: 'LXGW WenKai GB', serif; }
+  .comments :global(.tk-submit .el-button--primary),
+  .comments :global(.tk-row .el-button--primary) { border-color: #a45f28; background-color: #a45f28; }
+  .comments :global(.tk-submit .el-button--primary:hover),
+  .comments :global(.tk-row .el-button--primary:hover) { border-color: #8f5222; background-color: #8f5222; }
+  .comments :global(.tk-action-icon) { color: #897d6e; }
+  .comments :global(.tk-action-icon:hover) { color: #a45f28; }
+  .comments :global(.tk-admin) { color: #897d6e; }
+  .comments :global(.tk-required-hint) { display: block; margin-top: 2px; color: #a45f28; font: 12px system-ui, sans-serif; }
+</style>
