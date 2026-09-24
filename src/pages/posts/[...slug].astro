@@ -17,18 +17,24 @@ const date = new Intl.DateTimeFormat('zh-CN', { year:'numeric', month:'long', da
     <span hidden data-pagefind-meta="description" data-pagefind-ignore>{post.data.description}</span>
     <header><p class="eyebrow">{post.data.tags.map(tag => `#${tag}`).join(' · ')}</p><h1>{post.data.title}</h1><time datetime={post.data.pubDate.toISOString()}>{date}</time></header>
     <Content />
-    <Comments />
     <footer class="post-end"><span>完</span><p>谢谢你读到这里。</p></footer>
   </article>
+  <Comments />
 </BaseLayout>
 <style is:global>
- .post { margin:32px 0 55px; padding:42px 40px; max-width:none; border:1px solid var(--line); border-radius:8px; background:#fff; box-shadow:0 2px 6px #6a51310a; } .post header { margin-bottom:41px; } .post h1 { margin:0 0 13px; font-size:39px; line-height:1.32; font-weight:600; } .post header time { color:var(--muted); font:13px system-ui,sans-serif; }
+ .post { margin:32px 0 55px; padding:42px 40px; max-width:none; border:1px solid var(--line); border-radius:8px; background:#fff; box-shadow:0 2px 6px #6a51310a; }
+ /* 有评论区的文章页：文章卡片下方不留 margin，间距交给评论区；同时收紧底部留白。
+    「N 条评论」标题会插到文章与评论卡片之间，所以兄弟选择器要覆盖两种情形。 */
+ .post:has(+ [data-comment-root]),
+ .post:has(+ .comments-heading) { margin-bottom: 0; padding-bottom: 28px; }
+ .post:has(+ [data-comment-root]) .post-end,
+ .post:has(+ .comments-heading) .post-end { padding-bottom: 0; } .post header { margin-bottom:41px; } .post h1 { margin:0 0 13px; font-size:39px; line-height:1.32; font-weight:600; } .post header time { color:var(--muted); font:13px system-ui,sans-serif; }
  .prose :where(p,li) { font-size:17px; } .prose p { margin:0 0 1.45em; } .prose h2 { margin:2em 0 .65em; font-size:26px; } .prose h3 { margin:1.7em 0 .5em; font-size:20px; } .prose a { color:var(--accent); text-decoration:underline; text-underline-offset:3px; } .prose blockquote { margin:1.7em 0; padding:4px 0 4px 20px; border-left:3px solid #bdd8c8; color:#51645a; } .prose code { padding:.12em .35em; background:var(--soft); font:14px ui-monospace,monospace; } .prose pre { overflow:auto; padding:18px; background:#24352c; color:#f3f6f2; } .prose pre code { background:none; color:inherit; padding:0; }
  .prose img, .prose video { display:block; max-width:100%; height:auto; margin:1.7em auto; border:1px solid var(--line); border-radius:8px; background:var(--soft); }
  .prose figure { margin:1.9em 0; } .prose figure img, .prose figure video { margin:0 auto; }
  .prose figcaption { margin-top:9px; color:var(--muted); font:13px/1.6 system-ui,sans-serif; text-align:center; }
  .prose .video-embed { position:relative; height:0; padding-bottom:56.25%; overflow:hidden; border:1px solid var(--line); border-radius:8px; background:#24352c; }
  .prose .video-embed iframe { position:absolute; inset:0; width:100%; height:100%; border:0; } .prose .video-embed figcaption { margin-top:9px; }
- .post-end { display:block; margin-top:50px; padding-top:23px; border-top:1px solid var(--line); color:var(--muted); text-align:center; } .post-end span { color:var(--accent); font-size:21px; } .post-end p { margin:3px 0 0; font:13px system-ui,sans-serif; }
+ .post-end { display:block; margin:50px 0 0; padding-top:23px; border-top:1px solid var(--line); color:var(--muted); text-align:center; } .post-end span { color:var(--accent); font-size:21px; } .post-end p { margin:3px 0 0; font:13px system-ui,sans-serif; }
  @media(max-width:560px){ .post { padding:32px 24px; } .post h1 { font-size:31px; } .prose :where(p,li) { font-size:16px; } }
 </style>
