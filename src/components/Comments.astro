@@ -123,20 +123,28 @@ const configured = Boolean(envId && envId.trim());
     const FORM_LAYOUT_CSS = `
       /* 按钮统一圆角（Twikoo 的 .tk-button 默认是直角） */
       #twikoo .tk-button { border-radius: 6px !important; }
-      /* 发送按钮：去掉阴影，文字用正文黑色（与「取消」一致） */
+      /* 发送按钮：两个状态都是主题橙实底，边框与「取消」一致、不要阴影
+         可用态 = 不透明；禁用态 = 同样颜色 30% 透明度 */
       #twikoo .tk-submit .tk-send,
       #twikoo .tk-submit .tk-send.tk-button--primary {
         box-shadow: none !important;
-        color: var(--ink) !important;
+        border: 1px solid #e3d8c9 !important;
+        background-color: #a45f28 !important;
+        color: #fff !important;
+        border-radius: 6px !important;
+        opacity: 1 !important;
       }
-      /* 禁用态也用同一套配色，只是浅一点（与可用态视觉统一） */
+      #twikoo .tk-submit .tk-send:hover:not(.is-disabled) {
+        background-color: #8f5222 !important;
+        border-color: #e3d8c9 !important;
+      }
       #twikoo .tk-submit .tk-send.is-disabled,
       #twikoo .tk-submit .tk-send.is-disabled:hover {
-        color: var(--ink) !important;
-        background-color: #eddfcd !important;
-        border-color: #eddfcd !important;
-        box-shadow: 0 1px 2px rgba(106, 81, 49, .18) !important;
-        opacity: 1 !important;
+        background-color: #a45f28 !important;
+        border-color: #e3d8c9 !important;
+        color: #fff !important;
+        box-shadow: none !important;
+        opacity: .3 !important;
       }
       /* 评论条目：头像与昵称行对齐
          .tk-comment 是 [头像, .tk-main(昵称行+正文+系统信息)]，整块 130px 左右；
@@ -147,18 +155,22 @@ const configured = Boolean(envId && envId.trim());
       #twikoo .tk-comment .tk-main { margin-left: 12px !important; }
       #twikoo .tk-comment .tk-main > .tk-row:first-child { height: 36px !important; margin-top: 0 !important; align-items: center !important; }
       #twikoo .tk-comment .tk-main > .tk-row:first-child .tk-meta { height: 36px !important; align-items: center !important; }
+      /* 评论内部的纵向节奏：正文与系统信息留出呼吸感，同时收紧多余空隙 */
+      #twikoo .tk-comment .tk-content { margin: 10px 0 0 !important; }
+      #twikoo .tk-comment .tk-extras { margin-top: 10px !important; }
+      #twikoo .tk-comment .tk-extra { margin-top: 0 !important; }
+      #twikoo .tk-comment .tk-replies { margin-top: 12px !important; }
       /* 行内回复表单：字段左边缘与主表单的标签对齐 */
       #twikoo .tk-comment .tk-submit { margin-left: -29px !important; }
       /* 系统/浏览器信息：保留系统版本（如 iOS 26.6），隐去浏览器版本号
          （版本号在隐藏的原始 UA 文本里，可见文字只有「系统」和「浏览器」两类） */
       #twikoo .tk-extra-text { display: block !important; }
       #twikoo .tk-extra[data-ua="browser"] .tk-extra-text { display: none !important; }
-      /* 行内回复表单：标签等高，保证三个字段的输入框左边缘对齐 */
+      /* 行内回复表单：标签等高，保证三个字段的输入框左边缘对齐
+         （实测主表单/评论区容器/评论条目左边缘一致，无需再偏移） */
       #twikoo .tk-comment .tk-submit .tk-input-group__prepend {
         width: 4.6em !important; min-width: 4.6em !important; text-align: center !important;
       }
-      /* 行内回复表单：字段左边缘与主表单标签对齐 */
-      #twikoo .tk-comment .tk-submit { margin-left: -29px !important; }
       #twikoo .tk-meta-input { display: flex !important; flex-direction: column !important; gap: 10px !important; }
       #twikoo .tk-meta-input__item { display: flex !important; flex-direction: row !important; align-items: center !important; width: 100% !important; }
       #twikoo .tk-meta-input__item .tk-input-group__prepend { flex: none !important; width: 4.6em !important; min-width: 4.6em !important; text-align: center !important; }
@@ -242,11 +254,11 @@ const configured = Boolean(envId && envId.trim());
       });
     };
 
-    // 「取消」常驻在发送左侧（Twikoo 只在回复时才渲染这个按钮）
-    const ensureCancelButton = () => {
-      const submit = root.querySelector('#twikoo .tk-submit');
-      const send = submit?.querySelector('.tk-send');
-      if (!submit || !send || root.querySelector('#twikoo .tk-submit .tk-cancel')) return;
+    // 「取消」按钮：主表单和行内回复表单都补一个（Twikoo 只在回复时才渲染）
+    const addCancel = (submit) => {
+      if (!submit || submit.querySelector('.tk-cancel')) return;
+      const send = submit.querySelector('.tk-send');
+      if (!send) return;
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'tk-button tk-button--small tk-cancel';
@@ -267,6 +279,10 @@ const configured = Boolean(envId && envId.trim());
         textarea?.focus();
       });
       send.parentElement.insertBefore(btn, send);
+    };
+
+    const ensureCancelButton = () => {
+      root.querySelectorAll('#twikoo .tk-submit').forEach(addCancel);
     };
 
     const mount = () => {
