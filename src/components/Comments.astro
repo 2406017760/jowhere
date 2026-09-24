@@ -14,6 +14,17 @@ const configured = Boolean(envId && envId.trim());
     : <p class="comments-setup">评论服务尚未配置：在 <code>src/config.ts</code> 里把 <code>comment.envId</code> 填成你部署好的 Twikoo 云函数地址即可。</p>}
   <h2 class="tk-submit__title" data-comment-form-title hidden>添加新评论</h2>
 </div>
+<!-- 管理入口：页头中间的小点，连点 5 次打开 Twikoo 管理面板 -->
+<button type="button" class="admin-hotspot" data-admin-hotspot title="连点 5 次管理评论区" aria-label="管理评论区（连点 5 次）"></button>
+<script is:inline>
+  (() => {
+    // 把提示点插到页头品牌与导航之间，保持页头布局不变
+    const hotspot = document.querySelector('[data-admin-hotspot]');
+    const header = document.querySelector('.site-header');
+    const nav = header && header.querySelector('nav');
+    if (hotspot && header && nav) header.insertBefore(hotspot, nav);
+  })();
+</script>
 
 <script is:inline>
   (() => {
@@ -81,21 +92,27 @@ const configured = Boolean(envId && envId.trim());
       return true;
     };
 
-    // 管理入口隐藏：连续点击页头空白处 5 次后触发 Twikoo 的管理按钮。
+    // 管理入口隐藏：连续点击页头中间的提示点 5 次，打开 Twikoo 管理面板。
+    // Twikoo 的管理面板靠给 .tk-admin 加 __show 类显示（该节点一直存在于 DOM 中）。
     const bindAdminGesture = () => {
-      const header = document.querySelector('.site-header');
-      if (!header) return;
+      const trigger = document.querySelector('[data-admin-hotspot]');
+      if (!trigger) return;
       let hits = 0;
       let resetTimer;
-      header.addEventListener('click', (event) => {
-        if (event.target.closest('a, button, input, form')) return;
+      trigger.addEventListener('click', () => {
         hits += 1;
         clearTimeout(resetTimer);
         resetTimer = setTimeout(() => { hits = 0; }, 2000);
+        trigger.dataset.hits = String(hits);
         if (hits < 5) return;
         hits = 0;
+        trigger.dataset.hits = '0';
         const admin = root.querySelector('.tk-admin');
-        if (admin) admin.click();
+        if (!admin) {
+          console.warn('[comments] Twikoo 管理面板尚未就绪，请等评论区加载完成后再试');
+          return;
+        }
+        admin.classList.add('__show');
       });
     };
 
@@ -146,11 +163,30 @@ const configured = Boolean(envId && envId.trim());
 </script>
 
 <style>
-  /* 与正文之间留出和「文章与文章之间」一致的间隔 */
-  .comments { margin: 22px 0 0; padding-top: 0; border-top: 0; }
+  /* 评论区做成独立卡片：与文章之间露出背景格子，间距与文章间距一致（22px） */
+  .comments {
+    box-sizing: border-box; margin: 22px 0 0; padding: 30px 29px 32px;
+    border: 1px solid var(--line); border-radius: 8px; background: #fff; box-shadow: 0 2px 6px #6a51310a;
+  }
   .comments-title { margin: 0 0 16px; font-size: 22px; font-weight: 600; }
   .comments-setup { margin: 0; padding: 15px 17px; border: 1px dashed #d7b69a; border-radius: 8px; background: var(--soft); color: var(--muted); font: 14px/1.7 system-ui, sans-serif; }
   .comments-setup code { padding: .12em .35em; background: #fff; font: 13px ui-monospace, monospace; }
+
+  /* 页头中间的管理入口提示点：平时只是一个很淡的小点，悬停时提示可点击 */
+  .admin-hotspot {
+    flex: none; width: 30px; height: 30px; margin: 0 6px; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px dashed transparent; border-radius: 50%; background: transparent;
+    color: transparent; font: 12px system-ui, sans-serif; cursor: default;
+  }
+  .admin-hotspot::before { width: 7px; height: 7px; border-radius: 50%; background: #ded4c6; content: ''; }
+  .admin-hotspot:hover { border-color: #d7b69a; background: #fff; color: var(--muted); cursor: pointer; }
+  .admin-hotspot:hover::before { background: var(--accent); }
+  .admin-hotspot[data-hits="1"]::before,
+  .admin-hotspot[data-hits="2"]::before,
+  .admin-hotspot[data-hits="3"]::before,
+  .admin-hotspot[data-hits="4"]::before { background: var(--accent); transform: scale(1.25); }
+  @media (max-width: 560px) { .admin-hotspot { display: none; } }
 
   /* Twikoo 自带样式是通用蓝紫配色，这里整体调成站点的暖纸配色。 */
   .comments :global(.twikoo) { font-family: 'LXGW WenKai GB', 'Klee One', 'KaiTi', serif; }
@@ -178,14 +214,18 @@ const configured = Boolean(envId && envId.trim());
   .comments :global(.tk-textarea__inner::placeholder) { color: #b3a597; }
   .comments :global(.tk-textarea__inner) { display: block; width: 100%; min-height: 104px; line-height: 1.75; }
 
-  /* 昵称/邮箱/网址：显式排成一行并允许换行（不依赖 Twikoo 的 flex 规则），窄屏自动堆叠 */
-  .comments :global(.tk-meta-input) { display: flex; flex-flow: row wrap; gap: 10px; width: 100%; margin-bottom: 12px; }
-  .comments :global(.tk-meta-input__item) { flex: 1 1 200px; min-width: 0; margin: 0; }
-  /* 前缀色块只占内容宽度，别被 flex 拉宽（否则输入框会被挤到下一行） */
+  /* 昵称/邮箱/网址：每个字段占一整行，标签色块与输入框同行、输入框占满剩余宽度 */
+  .comments :global(.tk-meta-input) { display: flex; flex-flow: column nowrap; gap: 10px; width: 100%; margin-bottom: 12px; }
+  .comments :global(.tk-meta-input__item) {
+    display: flex; flex-flow: row nowrap; align-items: center; gap: 0;
+    flex: none; width: 100%; min-width: 0; margin: 0;
+  }
+  /* 前缀色块只占内容宽度，别被 flex 拉宽 */
   .comments :global(.tk-input-group__prepend) {
     flex: none; width: max-content; padding: 0 11px; border: 1px solid #e3d8c9; border-right: 0;
     border-radius: 6px 0 0 6px; background: var(--soft); color: #7d7062; font-size: 13px; white-space: nowrap;
   }
+  .comments :global(.tk-meta-input__item .tk-input) { display: flex; flex: 1 1 auto; width: auto; min-width: 0; }
   .comments :global(.tk-input--group .tk-input__inner) { flex: 1 1 0; width: auto; min-width: 0; border-radius: 0 6px 6px 0; }
   .comments :global(.tk-input),
   .comments :global(.tk-input__inner) { max-width: 100%; box-sizing: border-box; }
@@ -215,15 +255,18 @@ const configured = Boolean(envId && envId.trim());
   /* 次要按钮（预览）也一并隐藏，只留发送 */
   .comments :global(.tk-button.tk-button--small:not(.tk-button--primary)) { display: none; }
 
-  /* 头像：Twikoo 用 40px 高 + overflow:hidden 裁切，导致图片显示不全，改为完整填充 */
-  .comments :global(.tk-avatar) { width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 50%; background: var(--soft); }
-  .comments :global(.tk-comment .tk-avatar),
-  .comments :global(.tk-submit .tk-avatar) { overflow: hidden; }
-  .comments :global(.tk-comment .tk-avatar-img),
-  .comments :global(.tk-submit .tk-avatar-img) { width: 100%; height: 100%; overflow: visible; }
-  .comments :global(img.tk-avatar-img) { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+  /* 头像：Twikoo 让图片 height:2.5rem(40px) 且绝对居中，框小于 40px 时会被裁切。
+     这里把图片改成填满容器并 object-fit:cover，圆形框与图片尺寸严格一致。 */
+  .comments :global(.tk-avatar) { width: 36px; height: 36px; flex: none; border: 1px solid var(--line); border-radius: 50%; background: var(--soft); }
+  .comments :global(.tk-comment .tk-avatar) { overflow: hidden; }
+  .comments :global(.tk-comment .tk-avatar-img) { position: static; height: 100%; line-height: 1; overflow: visible; }
+  .comments :global(img.tk-avatar-img) {
+    position: static; display: block; width: 100%; height: 100%;
+    max-width: 100%; object-fit: cover; border-radius: 50%;
+  }
   .comments :global(.tk-avatar-img) { color: #b3a597; }
-  .comments :global(.tk-avatar-img svg) { width: 20px; height: 20px; }
+  .comments :global(.tk-avatar-img .tk-icon),
+  .comments :global(.tk-avatar-img svg) { width: 100%; height: 100%; }
 
   /* 评论列表：每条之间用浅虚线分隔，跟归档页一致 */
   .comments :global(.tk-comment) { padding: 0; }
