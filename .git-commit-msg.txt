@@ -1,8 +1,0 @@
-[style] fix comment section layout issues
-
-- 评论区改为独立卡片（白底+边框+圆角+阴影），与文章之间留出 22px 背景格子间隙
-- 修复头像裁切：Twikoo 让图片 height:2.5rem(40px) 且绝对居中，框 36px 时被裁成一条；
-  改为 width/height:100% + object-fit:cover + position:static，图片与圆形框尺寸一致
-- 昵称/邮箱/网址改为每个字段占一整行（标签色块与输入框同行）
-- 管理入口：页头新增可见提示点（悬停显示提示文案），
-  触发改用给 .tk-admin 加 __show 类（原来 click() 因 visibility:hidden 无效）

@@ -116,8 +116,29 @@ const configured = Boolean(envId && envId.trim());
       });
     };
 
+    // 表单字段的排版必须可靠生效：Twikoo 是运行时注入样式，同权重时会盖掉静态 CSS，
+    // 这里用一段带 !important 的动态样式兜底，规则永远赢。
+    const FORM_LAYOUT_CSS = `
+      #twikoo .tk-meta-input { display: flex !important; flex-direction: column !important; gap: 10px !important; }
+      #twikoo .tk-meta-input__item { display: flex !important; flex-direction: row !important; align-items: center !important; width: 100% !important; }
+      #twikoo .tk-meta-input__item .tk-input-group__prepend { flex: none !important; width: max-content !important; }
+      #twikoo .tk-meta-input__item .tk-input { flex: 1 1 auto !important; width: auto !important; min-width: 0 !important; }
+      #twikoo .tk-meta-input__item .tk-input__inner { flex: 1 1 0 !important; width: auto !important; min-width: 0 !important; }
+      #twikoo .tk-textarea__inner { display: block !important; width: 100% !important; }
+      #twikoo .tk-comments-actions { display: none !important; }
+      #twikoo .tk-submit-action-icon, #twikoo .tk-input-image, #twikoo .tk-preview { display: none !important; }
+    `;
+    const applyLayoutStyles = () => {
+      if (document.getElementById('tk-layout-overrides')) return;
+      const style = document.createElement('style');
+      style.id = 'tk-layout-overrides';
+      style.textContent = FORM_LAYOUT_CSS;
+      document.head.appendChild(style);
+    };
+
     const mount = () => {
       if (!window.twikoo) return;
+      applyLayoutStyles();
       window.twikoo.init({
         envId,
         el: '#twikoo',
@@ -163,9 +184,9 @@ const configured = Boolean(envId && envId.trim());
 </script>
 
 <style>
-  /* 评论区做成独立卡片：与文章之间露出背景格子，间距与文章间距一致（22px） */
+  /* 评论区做成独立卡片：与文章之间露出背景格子，间距取文章卡片间距 18px */
   .comments {
-    box-sizing: border-box; margin: 22px 0 0; padding: 30px 29px 32px;
+    box-sizing: border-box; margin: 18px 0 0; padding: 30px 29px 32px;
     border: 1px solid var(--line); border-radius: 8px; background: #fff; box-shadow: 0 2px 6px #6a51310a;
   }
   .comments-title { margin: 0 0 16px; font-size: 22px; font-weight: 600; }

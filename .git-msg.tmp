@@ -1,0 +1,7 @@
+[style] comment card spacing and inline field rows
+
+- 评论区与文章间距改为 18px（与首页文章卡片间距一致），两者都是独立白卡片，中间露出背景格子
+- 昵称/邮箱/网址每行都是「标签 + 输入框」同一行，输入框占满剩余宽度
+- 新增动态样式兜底：Twikoo 运行时注入的样式会盖掉同权重静态 CSS，
+  用带 !important 的 #twikoo 规则确保表单排版、隐藏按钮等规则始终生效
+- 顺带删除误提交的 .git-commit-msg.txt
