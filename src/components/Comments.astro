@@ -117,8 +117,16 @@ const configured = Boolean(envId && envId.trim());
       #twikoo .tk-meta-input__item .tk-input { flex: 1 1 auto !important; width: auto !important; min-width: 0 !important; }
       #twikoo .tk-meta-input__item .tk-input__inner { flex: 1 1 0 !important; width: auto !important; min-width: 0 !important; padding-left: 10px !important; padding-right: 10px !important; }
       #twikoo .tk-textarea__inner { display: block !important; width: 100% !important; padding: 8px 10px !important; }
-      #twikoo .tk-comments-actions { display: none !important; }
-      #twikoo .tk-submit-action-icon, #twikoo .tk-input-image, #twikoo .tk-preview { display: none !important; }
+      /* 无用元素：搜索、刷新、设置、排序、表情、图片、Markdown、预览、必填提示
+         （选择器和元素一样高，Twikoo 的更高优先级规则也压不住） */
+      #twikoo .tk-comments-actions,
+      #twikoo .tk-comments-sort,
+      #twikoo .tk-sort-item,
+      #twikoo .tk-comments-search,
+      #twikoo .tk-submit-action-icon,
+      #twikoo .tk-input-image,
+      #twikoo .tk-preview,
+      #twikoo .tk-required-hint { display: none !important; }
     `;
     const applyLayoutStyles = () => {
       if (document.getElementById('tk-layout-overrides')) return;
@@ -343,4 +351,9 @@ const configured = Boolean(envId && envId.trim());
   }
   .comments-heading::after,
   .comments-heading::before { content: none !important; display: none !important; }
+  /* 排序（最新/最早/热门）装在标题里面，标题被移出卡片后要一并隐藏 */
+  .comments-heading .tk-comments-actions,
+  .comments-heading .tk-comments-sort,
+  .comments-heading .tk-sort-item,
+  .comments-heading .tk-comments-search { display: none !important; }
 </style>
