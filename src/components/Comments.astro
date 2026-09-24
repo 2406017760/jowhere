@@ -90,6 +90,18 @@ const configured = Boolean(envId && envId.trim());
       admin.style.display = 'none';
     };
 
+    // 打开管理面板：Twikoo 的管理按钮是 visibility:hidden，直接 click() 不生效，
+    // 所以统一用「加 __show 类」的方式打开。外部（比如 Twikoo 配置页里的自定义逻辑）
+    // 可以派发 `comments:admin-open` 事件来调用它。
+    const openAdminPanel = () => {
+      const admin = root.querySelector('#twikoo .tk-admin');
+      if (!admin) return false;
+      admin.style.display = '';
+      admin.classList.add('__show');
+      clearAdminMask();
+      return true;
+    };
+
     const watchAdminOpen = () => {
       const admin = root.querySelector('#twikoo .tk-admin');
       if (!admin) return false;
@@ -117,8 +129,6 @@ const configured = Boolean(envId && envId.trim());
       });
 
       if (admin.classList.contains('__show')) {
-        // 重新打开时清掉关闭时写上的内联隐藏，否则会出现「开了却看不见」
-        if (admin.style.display === 'none') admin.style.display = '';
         clearAdminMask();
         const guard = admin.dataset.maskGuard;
         if (guard !== 'on') {
@@ -132,11 +142,14 @@ const configured = Boolean(envId && envId.trim());
             }
           }, 250);
         }
-      } else {
-        admin.style.display = '';
       }
       return true;
     };
+
+    // 外部触发入口：document.dispatchEvent(new Event('comments:admin-open'))
+    document.addEventListener('comments:admin-open', openAdminPanel);
+    // 同时挂到 window 上，方便在控制台或配置里直接调用
+    window.openTwikooAdmin = openAdminPanel;
 
     // 表单字段的排版必须可靠生效：Twikoo 是运行时注入样式，同权重时会盖掉静态 CSS，
     // 这里用一段带 !important 的动态样式兜底，规则永远赢。
@@ -244,8 +257,8 @@ const configured = Boolean(envId && envId.trim());
         if (article && article.classList.contains('comments-heading')) {
           const post = article.previousElementSibling;
           if (post && post.classList.contains('post')) {
+            // 只动 CSS 管不到的部分：底部内边距与 post-end 交给 .post:has(...) 规则
             post.style.marginBottom = '0';
-            post.style.paddingBottom = '28px';
             const end = post.querySelector('.post-end');
             if (end) end.style.paddingBottom = '0';
           }
