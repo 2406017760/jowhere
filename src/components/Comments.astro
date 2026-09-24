@@ -132,7 +132,26 @@ const configured = Boolean(envId && envId.trim());
     const watchActionsRow = (node) => {
       if (!node || !('MutationObserver' in window) || watchedAdminRows.has(node)) return;
       watchedAdminRows.add(node);
-      new MutationObserver(() => flagAdminEntry()).observe(node, { childList: true, subtree: true });
+      new MutationObserver(() => {
+        flagAdminEntry();
+        watchAdminOpen();
+      }).observe(node, { childList: true, subtree: true });
+    };
+
+    // 面板打开期间低频清掉残留遮罩。注意调用时机不能只挂在页面加载后的轮询里：
+    // 用户往往是加载完很久才点管理图标的，那时轮询早就停了，遮罩会一直盖着转圈。
+    const startMaskGuard = (admin) => {
+      clearAdminMask();
+      if (admin.dataset.maskGuard === 'on') return;
+      admin.dataset.maskGuard = 'on';
+      let ticks = 0;
+      const timer = setInterval(() => {
+        clearAdminMask();
+        if (++ticks > 120 || !admin.classList.contains('__show')) {
+          clearInterval(timer);
+          delete admin.dataset.maskGuard;
+        }
+      }, 250);
     };
 
     const watchAdminOpen = () => {
@@ -145,9 +164,9 @@ const configured = Boolean(envId && envId.trim());
       if (admin.dataset.openWatcher !== '1') {
         admin.dataset.openWatcher = '1';
         new MutationObserver(() => {
-          if (admin.classList.contains('__show') && admin.style.display === 'none') {
-            admin.style.display = '';
-          }
+          if (!admin.classList.contains('__show')) return;
+          if (admin.style.display === 'none') admin.style.display = '';
+          startMaskGuard(admin);
         }).observe(admin, { attributes: true, attributeFilter: ['class'] });
       }
 
@@ -162,21 +181,7 @@ const configured = Boolean(envId && envId.trim());
         });
       });
 
-      if (admin.classList.contains('__show')) {
-        clearAdminMask();
-        const guard = admin.dataset.maskGuard;
-        if (guard !== 'on') {
-          admin.dataset.maskGuard = 'on';
-          let ticks = 0;
-          const timer = setInterval(() => {
-            clearAdminMask();
-            if (++ticks > 120 || !admin.classList.contains('__show')) {
-              clearInterval(timer);
-              delete admin.dataset.maskGuard;
-            }
-          }, 250);
-        }
-      }
+      if (admin.classList.contains('__show')) startMaskGuard(admin);
       return true;
     };
 
