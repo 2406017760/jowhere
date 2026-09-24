@@ -118,6 +118,21 @@ const configured = Boolean(envId && envId.trim());
     const FORM_LAYOUT_CSS = `
       /* 按钮统一圆角（Twikoo 的 .tk-button 默认是直角） */
       #twikoo .tk-button { border-radius: 6px !important; }
+      /* 发送按钮：去掉阴影，文字用正文黑色（与「取消」一致） */
+      #twikoo .tk-submit .tk-send,
+      #twikoo .tk-submit .tk-send.tk-button--primary {
+        box-shadow: none !important;
+        color: var(--ink) !important;
+      }
+      #twikoo .tk-submit .tk-send.is-disabled,
+      #twikoo .tk-submit .tk-send.is-disabled:hover { color: #a2937f !important; }
+      /* 评论条目：头像顶部对齐，昵称与头像顶部同一水平线（内容行在下方） */
+      #twikoo .tk-comment { align-items: flex-start !important; }
+      #twikoo .tk-comment .tk-avatar { margin: 0 !important; }
+      #twikoo .tk-comment .tk-col { margin-left: 12px !important; }
+      #twikoo .tk-comment .tk-meta { min-height: 36px; align-items: center !important; }
+      /* 系统/浏览器信息只留图标，隐去带版本号的文字 */
+      #twikoo .tk-extra-text { display: none !important; }
       #twikoo .tk-meta-input { display: flex !important; flex-direction: column !important; gap: 10px !important; }
       #twikoo .tk-meta-input__item { display: flex !important; flex-direction: row !important; align-items: center !important; width: 100% !important; }
       #twikoo .tk-meta-input__item .tk-input-group__prepend { flex: none !important; width: 4.6em !important; min-width: 4.6em !important; text-align: center !important; }
