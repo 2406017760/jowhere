@@ -219,12 +219,13 @@ const configured = Boolean(envId && envId.trim());
       #twikoo .tk-meta-input__item .tk-input { flex: 1 1 auto !important; width: auto !important; min-width: 0 !important; }
       #twikoo .tk-meta-input__item .tk-input__inner { flex: 1 1 0 !important; width: auto !important; min-width: 0 !important; padding-left: 10px !important; padding-right: 10px !important; }
       #twikoo .tk-textarea__inner { display: block !important; width: 100% !important; padding: 8px 10px !important; }
-      /* 无用元素：搜索、刷新、设置、排序、表情、图片、Markdown、预览、必填提示
-         （选择器和元素一样高，Twikoo 的更高优先级规则也压不住） */
-      #twikoo .tk-comments-actions,
+      /* 无用元素：排序、搜索、刷新、表情、图片、Markdown、预览、必填提示。
+         注意：管理入口（HIDE_ADMIN_CRYPT 暗号触发）也在这排 .tk-comments-actions 里，
+         所以不能整排隐藏，只隐藏排序与搜索/刷新，保留管理图标。 */
       #twikoo .tk-comments-sort,
       #twikoo .tk-sort-item,
       #twikoo .tk-comments-search,
+      #twikoo .tk-comments-actions > .tk-icon.__comments:not(:last-child),
       #twikoo .tk-submit-action-icon,
       #twikoo .tk-input-image,
       #twikoo .tk-preview,
@@ -411,9 +412,6 @@ const configured = Boolean(envId && envId.trim());
   /* 「N 条评论」被移到卡片外的背景格子上：字号放大、不要装饰横线。
      它是 body 级的兄弟节点，选不中作用域，所以放到下面的全局样式里。 */
 
-  /* 去掉评论列表上方那排：搜索、刷新、设置、排序（管理入口改为页头连点 5 次） */
-  .comments :global(.tk-comments-actions) { display: none; }
-
   /* 输入框：去掉 Twikoo 的空值红框（.tk-input input:invalid），统一成奶油底 */
   .comments :global(.tk-input__inner),
   .comments :global(.tk-textarea__inner) {
@@ -511,9 +509,12 @@ const configured = Boolean(envId && envId.trim());
   }
   .comments-heading::after,
   .comments-heading::before { content: none !important; display: none !important; }
-  /* 排序（最新/最早/热门）装在标题里面，标题被移出卡片后要一并隐藏 */
-  .comments-heading .tk-comments-actions,
+  /* 标题被移出卡片后，排序（最新/最早/热门）与搜索要一并隐藏；
+     但管理入口图标也在这排里，必须保留，所以只隐藏排序与搜索/刷新。 */
   .comments-heading .tk-comments-sort,
   .comments-heading .tk-sort-item,
-  .comments-heading .tk-comments-search { display: none !important; }
+  .comments-heading .tk-comments-search,
+  .comments-heading .tk-comments-actions > .tk-icon.__comments:not(:last-child) { display: none !important; }
+  /* 去掉评论区底部的「Powered by Twikoo」 */
+  #twikoo .tk-footer { display: none !important; }
 </style>
