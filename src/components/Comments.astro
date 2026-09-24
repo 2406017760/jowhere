@@ -66,13 +66,15 @@ const configured = Boolean(envId && envId.trim());
       });
     };
 
-    // 把提交表单挪到评论列表下方（Twikoo 默认放在列表上方），并把「添加新评论」标题放到表单前面。
-    // 这里刻意不用 MutationObserver：监听子树会被自己的插入再次触发，容易形成死循环把页面卡死。
-    // 改为低频轮询 + 幂等判断，且只在真正需要时才动 DOM。
+    // 把主提交表单挪到评论列表下方（Twikoo 默认放在列表上方），并把「添加新评论」标题放到表单前面。
+    // 「行内回复表单」是评论条目里的另一个 .tk-submit，必须留在原地，否则回复功能会被破坏。
+    // 刻意不用 MutationObserver：监听子树会被自己的插入再次触发，容易形成死循环把页面卡死。
     const layoutForm = () => {
       const host = document.getElementById('twikoo');
-      const submit = host?.querySelector('.tk-submit');
-      if (!host || !submit) return false;
+      if (!host) return false;
+      // 主表单 = 不在任何评论条目里的那个 .tk-submit；行内回复表单要留在原地
+      const submit = [...host.querySelectorAll('.tk-submit')].find((el) => !el.closest('.tk-comment'));
+      if (!submit) return false;
       const title = root.querySelector('[data-comment-form-title]');
 
       const submitPlaced = submit.parentElement === host;
@@ -124,13 +126,26 @@ const configured = Boolean(envId && envId.trim());
         box-shadow: none !important;
         color: var(--ink) !important;
       }
+      /* 禁用态也用同一套配色，只是浅一点（与可用态视觉统一） */
       #twikoo .tk-submit .tk-send.is-disabled,
-      #twikoo .tk-submit .tk-send.is-disabled:hover { color: #a2937f !important; }
-      /* 评论条目：头像顶部对齐，昵称与头像顶部同一水平线（内容行在下方） */
+      #twikoo .tk-submit .tk-send.is-disabled:hover {
+        color: var(--ink) !important;
+        background-color: #eddfcd !important;
+        border-color: #eddfcd !important;
+        box-shadow: 0 1px 2px rgba(106, 81, 49, .18) !important;
+        opacity: 1 !important;
+      }
+      /* 评论条目：头像与昵称行对齐
+         .tk-comment 是 [头像, .tk-main(昵称行+正文+系统信息)]，整块 130px 左右；
+         如果让头像居中对齐整块，它会落到正文中间。所以改成顶部对齐，
+         再把昵称行压到与头像同高（36px）并居中，头像正好落在昵称行中线上。 */
       #twikoo .tk-comment { align-items: flex-start !important; }
       #twikoo .tk-comment .tk-avatar { margin: 0 !important; }
-      #twikoo .tk-comment .tk-col { margin-left: 12px !important; }
-      #twikoo .tk-comment .tk-meta { min-height: 36px; align-items: center !important; }
+      #twikoo .tk-comment .tk-main { margin-left: 12px !important; }
+      #twikoo .tk-comment .tk-main > .tk-row:first-child { height: 36px !important; margin-top: 0 !important; align-items: center !important; }
+      #twikoo .tk-comment .tk-main > .tk-row:first-child .tk-meta { height: 36px !important; align-items: center !important; }
+      /* 行内回复表单：字段左边缘与主表单的标签对齐 */
+      #twikoo .tk-comment .tk-submit { margin-left: -29px !important; }
       /* 系统/浏览器信息只留图标，隐去带版本号的文字 */
       #twikoo .tk-extra-text { display: none !important; }
       #twikoo .tk-meta-input { display: flex !important; flex-direction: column !important; gap: 10px !important; }
