@@ -9,10 +9,10 @@ const { envId = comment.envId, path = Astro.url.pathname } = Astro.props;
 const configured = Boolean(envId && envId.trim());
 ---
 <div class="comments" data-pagefind-ignore data-comment-root data-env-id={envId} data-comment-path={path} data-comment-client={comment.clientPath} data-comment-lang={comment.lang}>
+  <h2 class="comments-title">评论</h2>
   {configured
     ? <div id="twikoo" class="comments-body"></div>
     : <p class="comments-setup">评论服务尚未配置：在 <code>src/config.ts</code> 里把 <code>comment.envId</code> 填成你部署好的 Twikoo 云函数地址即可。</p>}
-  <h2 class="tk-submit__title" data-comment-form-title hidden>添加新评论</h2>
 </div>
 
 <script is:inline>
@@ -21,14 +21,15 @@ const configured = Boolean(envId && envId.trim());
     if (!root) return;
     const envId = (root.dataset.envId || '').trim();
 
-    // 字段规则：昵称、邮箱必填，网址选填；label 只用纯名称，必填/选填写进 placeholder。
+    // Twikoo 默认昵称、邮箱、网址都必填；这里做成昵称必填、邮箱必填、网址选填。
+    // 真实结构是 Element Plus 的包装：.tk-input > .el-input__inner，标签是
+    // .tk-input-group__prepend 里的纯文本，字段实例上带有 name/type 属性。
     const FIELD_RULES = [
-      { name: 'nick', label: '昵称', hint: '请填写昵称', type: 'text', autocomplete: 'nickname' },
-      { name: 'mail', label: '邮箱', hint: '请填写邮箱（不会公开）', type: 'email', autocomplete: 'email' },
-      { name: 'link', label: '网址', hint: '', type: 'url', autocomplete: 'url' },
+      { name: 'nick', hint: '请填写昵称', type: 'text', autocomplete: 'nickname' },
+      { name: 'mail', hint: '请填写邮箱（不会公开）', type: 'email', autocomplete: 'email' },
+      { name: 'link', hint: '', type: 'url', autocomplete: 'url' },
     ];
 
-    // 昵称/邮箱/网址：只在输入框内用 placeholder 标明必填/选填，标签保持简洁。
     const applyRequiredRule = () => {
       FIELD_RULES.forEach((rule) => {
         const input = root.querySelector(`.tk-meta-input input[name="${rule.name}"]`)
@@ -42,278 +43,36 @@ const configured = Boolean(envId && envId.trim());
         input.required = required;
         input.type = rule.type;
         input.autocomplete = rule.autocomplete;
-        // 必填/选填写进输入框提示，标签只用纯名称
-        input.placeholder = required ? '必填' : '选填';
 
-        const label = item.querySelector('.tk-input-group__prepend');
-        if (label) label.textContent = rule.label;
-      });
-    };
+        const label = item.querySelector('.tk-input-group__prepend') || item.querySelector('label');
+        if (label) label.append(required ? '（必填）' : '（选填）');
 
-    // 把主提交表单挪到评论列表下方（Twikoo 默认放在列表上方），并把「添加新评论」标题放到表单前面。
-    // 「行内回复表单」是评论条目里的另一个 .tk-submit，必须留在原地，否则回复功能会被破坏。
-    // 刻意不用 MutationObserver：监听子树会被自己的插入再次触发，容易形成死循环把页面卡死。
-    const layoutForm = () => {
-      const host = document.getElementById('twikoo');
-      if (!host) return false;
-      // 主表单 = 不在任何评论条目里的那个 .tk-submit；行内回复表单要留在原地
-      const submit = [...host.querySelectorAll('.tk-submit')].find((el) => !el.closest('.tk-comment'));
-      if (!submit) return false;
-      const title = root.querySelector('[data-comment-form-title]');
-
-      const submitPlaced = submit.parentElement === host;
-      const titlePlaced = !title || (title.parentElement === host && title.nextElementSibling === submit);
-      if (submitPlaced && titlePlaced) return true;
-
-      const anchor = host.querySelector('.tk-admin-container');
-      if (anchor && anchor.parentElement === host) host.insertBefore(submit, anchor);
-      else host.append(submit);
-      if (title) {
-        title.hidden = false;
-        host.insertBefore(title, submit);
-      }
-      return true;
-    };
-
-    // 管理面板的辅助处理：
-    // 1) 请求遮罩（.tk-loading-mask）因为节点被移动过，Twikoo 的清除回调有时跑不到，
-    //    会一直盖在面板上；这里在面板打开期间低频移除残留遮罩。
-    // 2) 关闭按钮（×）的关闭回调同样受节点移动影响，点不动；补一个兜底关闭。
-    const clearAdminMask = () => {
-      root.querySelectorAll('#twikoo .tk-admin .tk-loading-mask').forEach((mask) => mask.remove());
-    };
-
-    const closeAdminPanel = () => {
-      const admin = root.querySelector('#twikoo .tk-admin');
-      if (!admin) return;
-      admin.classList.remove('__show');
-      admin.style.display = 'none';
-    };
-
-    const watchAdminOpen = () => {
-      const admin = root.querySelector('#twikoo .tk-admin');
-      if (!admin) return false;
-
-      // × 关闭兜底（只在 Twikoo 自己没关掉时才动手）
-      admin.querySelectorAll('.tk-admin-close').forEach((btn) => {
-        if (btn.dataset.closeBound === '1') return;
-        btn.dataset.closeBound = '1';
-        btn.addEventListener('click', () => {
-          setTimeout(() => {
-            if (admin.classList.contains('__show')) closeAdminPanel();
-          }, 300);
+        if (!required) return;
+        const hint = document.createElement('span');
+        hint.className = 'tk-required-hint';
+        hint.textContent = rule.hint;
+        item.append(hint);
+        input.addEventListener('input', () => {
+          hint.textContent = input.value.trim() ? '' : rule.hint;
         });
       });
-
-      if (admin.classList.contains('__show')) {
-        clearAdminMask();
-        const guard = admin.dataset.maskGuard;
-        if (guard !== 'on') {
-          admin.dataset.maskGuard = 'on';
-          let ticks = 0;
-          const timer = setInterval(() => {
-            clearAdminMask();
-            if (++ticks > 120 || !admin.classList.contains('__show')) {
-              clearInterval(timer);
-              delete admin.dataset.maskGuard;
-            }
-          }, 250);
-        }
-      } else {
-        admin.style.display = '';
-      }
-      return true;
-    };
-
-    // 表单字段的排版必须可靠生效：Twikoo 是运行时注入样式，同权重时会盖掉静态 CSS，
-    // 这里用一段带 !important 的动态样式兜底，规则永远赢。
-    const FORM_LAYOUT_CSS = `
-      /* 按钮统一圆角（Twikoo 的 .tk-button 默认是直角） */
-      #twikoo .tk-button { border-radius: 6px !important; }
-      /* 发送按钮：两个状态都是柔和的暖橙实底，边框与「取消」一致、不要阴影
-         可用态 = 不透明；禁用态 = 同样颜色 30% 透明度
-         主色 #a45f28 用在按钮上偏重，这里取浅一档的 #c08a55 */
-      #twikoo .tk-submit .tk-send,
-      #twikoo .tk-submit .tk-send.tk-button--primary {
-        box-shadow: none !important;
-        border: 1px solid #e3d8c9 !important;
-        background-color: #c08a55 !important;
-        color: #fff !important;
-        border-radius: 6px !important;
-        opacity: 1 !important;
-      }
-      #twikoo .tk-submit .tk-send:hover:not(.is-disabled) {
-        background-color: #b07a45 !important;
-        border-color: #e3d8c9 !important;
-      }
-      #twikoo .tk-submit .tk-send.is-disabled,
-      #twikoo .tk-submit .tk-send.is-disabled:hover {
-        background-color: #c08a55 !important;
-        border-color: #e3d8c9 !important;
-        color: #fff !important;
-        box-shadow: none !important;
-        opacity: .3 !important;
-      }
-      /* 评论条目：头像与昵称行对齐
-         .tk-comment 是 [头像, .tk-main(昵称行+正文+系统信息)]，整块 130px 左右；
-         如果让头像居中对齐整块，它会落到正文中间。所以改成顶部对齐，
-         再把昵称行压到与头像同高（36px）并居中，头像正好落在昵称行中线上。 */
-      #twikoo .tk-comment { align-items: flex-start !important; }
-      #twikoo .tk-comment .tk-avatar { margin: 0 !important; }
-      #twikoo .tk-comment .tk-main { margin-left: 12px !important; }
-      #twikoo .tk-comment .tk-main > .tk-row:first-child { height: 36px !important; margin-top: 0 !important; align-items: center !important; }
-      #twikoo .tk-comment .tk-main > .tk-row:first-child .tk-meta { height: 36px !important; align-items: center !important; }
-      /* 评论内部的纵向节奏：正文与系统信息留出呼吸感，同时收紧多余空隙 */
-      #twikoo .tk-comment .tk-content { margin: 10px 0 0 !important; }
-      #twikoo .tk-comment .tk-extras { margin-top: 10px !important; }
-      #twikoo .tk-comment .tk-extra { margin-top: 0 !important; }
-      #twikoo .tk-comment .tk-replies { margin-top: 12px !important; }
-      /* 行内回复表单：字段左边缘与主表单的标签对齐 */
-      #twikoo .tk-comment .tk-submit { margin-left: -29px !important; }
-      /* 系统/浏览器信息：保留系统版本（如 iOS 26.6），隐去浏览器版本号
-         （版本号在隐藏的原始 UA 文本里，可见文字只有「系统」和「浏览器」两类） */
-      #twikoo .tk-extra-text { display: block !important; }
-      #twikoo .tk-extra[data-ua="browser"] .tk-extra-text { display: none !important; }
-      /* 行内回复表单：标签等高，保证三个字段的输入框左边缘对齐
-         （实测主表单/评论区容器/评论条目左边缘一致，无需再偏移） */
-      #twikoo .tk-comment .tk-submit .tk-input-group__prepend {
-        width: 4.6em !important; min-width: 4.6em !important; text-align: center !important;
-      }
-      #twikoo .tk-meta-input { display: flex !important; flex-direction: column !important; gap: 10px !important; }
-      #twikoo .tk-meta-input__item { display: flex !important; flex-direction: row !important; align-items: center !important; width: 100% !important; }
-      #twikoo .tk-meta-input__item .tk-input-group__prepend { flex: none !important; width: 4.6em !important; min-width: 4.6em !important; text-align: center !important; }
-      #twikoo .tk-meta-input__item .tk-input { flex: 1 1 auto !important; width: auto !important; min-width: 0 !important; }
-      #twikoo .tk-meta-input__item .tk-input__inner { flex: 1 1 0 !important; width: auto !important; min-width: 0 !important; padding-left: 10px !important; padding-right: 10px !important; }
-      #twikoo .tk-textarea__inner { display: block !important; width: 100% !important; padding: 8px 10px !important; }
-      /* 无用元素：搜索、刷新、设置、排序、表情、图片、Markdown、预览、必填提示
-         （选择器和元素一样高，Twikoo 的更高优先级规则也压不住） */
-      #twikoo .tk-comments-actions,
-      #twikoo .tk-comments-sort,
-      #twikoo .tk-sort-item,
-      #twikoo .tk-comments-search,
-      #twikoo .tk-submit-action-icon,
-      #twikoo .tk-input-image,
-      #twikoo .tk-preview,
-      #twikoo .tk-required-hint { display: none !important; }
-      /* 「取消」常驻在发送左侧（Twikoo 默认只在回复时渲染） */
-      #twikoo .tk-submit .tk-cancel {
-        display: inline-flex !important; align-items: center !important;
-        margin-right: 8px !important; height: 34px !important; padding: 0 16px !important;
-        border: 1px solid #e3d8c9 !important; border-radius: 6px !important;
-        background: #fff !important; color: var(--ink) !important; font-family: 'LXGW WenKai GB', serif !important;
-      }
-      #twikoo .tk-submit .tk-cancel:hover { border-color: var(--accent) !important; color: var(--accent) !important; }
-    `;
-    const applyLayoutStyles = () => {
-      if (document.getElementById('tk-layout-overrides')) return;
-      const style = document.createElement('style');
-      style.id = 'tk-layout-overrides';
-      style.textContent = FORM_LAYOUT_CSS;
-      document.head.appendChild(style);
-    };
-
-    // 「N 条评论」从卡片里移到卡片外面（背景格子上），字号同步调大。
-    // Vue 重渲染会把它放回卡片内，所以每次发现它跑回去就再移出来（幂等，不会循环）。
-    let tryingTitle = false;
-    const layoutTitle = () => {
-      const host = document.getElementById('twikoo');
-      if (!host || tryingTitle) return;
-      const title = host.querySelector('.tk-comments-title');
-      if (!title) return;                       // 已经在外面，或还没渲染出来
-      tryingTitle = true;
-      try {
-        title.classList.remove('tk-comments-title');
-        title.classList.add('comments-heading');
-        title.style.margin = '16px 0 8px';
-        root.parentNode.insertBefore(title, root);
-        root.style.marginTop = '18px';
-        const article = root.previousElementSibling;
-        if (article && article.classList.contains('comments-heading')) {
-          const post = article.previousElementSibling;
-          if (post && post.classList.contains('post')) {
-            post.style.marginBottom = '0';
-            post.style.paddingBottom = '28px';
-            const end = post.querySelector('.post-end');
-            if (end) end.style.paddingBottom = '0';
-          }
-        }
-      } finally {
-        tryingTitle = false;
-      }
-    };
-
-    // 系统/浏览器信息：
-    // 第 1 项是系统（保留版本，如 iOS 26.6），第 2 项是浏览器（去掉版本号）。
-    // 给浏览器那项打标记交给 CSS 隐藏文字；同时兜底清掉残留的版本号。
-    const BROWSER_RE = /(Chrome|Safari|Firefox|Edge|Opera|HeadlessChrome|MSIE|Trident)/i;
-    const cleanExtraLine = () => {
-      root.querySelectorAll('#twikoo .tk-extra').forEach((extra) => {
-        const textEl = extra.querySelector('.tk-extra-text');
-        if (!textEl) return;
-        const text = (textEl.textContent || '').trim();
-        if (!text) return;
-        if (BROWSER_RE.test(text)) {
-          extra.dataset.ua = 'browser';
-          const stripped = text.replace(/\s*\d+(\.\d+)*\s*/g, '').trim();
-          if (stripped && stripped !== text) textEl.textContent = stripped;
-        } else {
-          delete extra.dataset.ua;
-        }
-      });
-    };
-
-    // 「取消」按钮：主表单和行内回复表单都补一个（Twikoo 只在回复时才渲染）
-    const addCancel = (submit) => {
-      if (!submit || submit.querySelector('.tk-cancel')) return;
-      const send = submit.querySelector('.tk-send');
-      if (!send) return;
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'tk-button tk-button--small tk-cancel';
-      btn.textContent = '取消';
-      btn.addEventListener('click', () => {
-        const textarea = submit.querySelector('textarea');
-        if (textarea) {
-          textarea.value = '';
-          textarea.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-        ['nick', 'mail', 'link'].forEach((name) => {
-          const input = submit.querySelector(`input[name="${name}"]`);
-          if (input) {
-            input.value = '';
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-        });
-        textarea?.focus();
-      });
-      send.parentElement.insertBefore(btn, send);
-    };
-
-    const ensureCancelButton = () => {
-      root.querySelectorAll('#twikoo .tk-submit').forEach(addCancel);
     };
 
     const mount = () => {
       if (!window.twikoo) return;
-      applyLayoutStyles();
       window.twikoo.init({
         envId,
         el: '#twikoo',
         path: root.dataset.commentPath,
         lang: root.dataset.commentLang,
       });
-      // 每 250ms 检查一次，最多 40 次（约 10 秒），到位后立即停止。
+      // 评论区是异步渲染的，轮询到三个输入框都出现后补上校验规则。
       let tries = 0;
       const timer = setInterval(() => {
-        const placed = layoutForm();
-        layoutTitle();
-        watchAdminOpen();
         applyRequiredRule();
-        ensureCancelButton();
-        cleanExtraLine();
-        tries += 1;
-        if ((placed && tries > 4) || tries > 40) clearInterval(timer);
-      }, 250);
+        const ready = FIELD_RULES.every((rule) => root.querySelector(`input[name="${rule.name}"]`));
+        if (ready || ++tries > 150) clearInterval(timer);
+      }, 200);
     };
 
     const load = () => {
@@ -344,129 +103,23 @@ const configured = Boolean(envId && envId.trim());
 </script>
 
 <style>
-  /* 评论区做成独立卡片：宽度与文章卡片一致，之间露出背景格子（18px） */
-  .comments {
-    box-sizing: border-box; width: 100%; margin: 18px 0 0; padding: 30px 40px 34px;
-    border: 1px solid var(--line); border-radius: 8px; background: #fff; box-shadow: 0 2px 6px #6a51310a;
-  }
+  .comments { margin-top: 44px; padding-top: 26px; border-top: 1px solid var(--line); }
   .comments-title { margin: 0 0 16px; font-size: 22px; font-weight: 600; }
   .comments-setup { margin: 0; padding: 15px 17px; border: 1px dashed #d7b69a; border-radius: 8px; background: var(--soft); color: var(--muted); font: 14px/1.7 system-ui, sans-serif; }
   .comments-setup code { padding: .12em .35em; background: #fff; font: 13px ui-monospace, monospace; }
 
-  /* Twikoo 自带样式是通用蓝紫配色，这里整体调成站点的暖纸配色。 */
-  .comments :global(.twikoo) { font-family: 'LXGW WenKai GB', 'Klee One', 'KaiTi', serif; }
-
-  /* 两个标题：上方「评论」、下方「添加新评论」，统一站点标题风格 */
+  /* Twikoo 自带样式是通用蓝紫配色，这里调成站点配色。 */
   .comments :global(.tk-comments-title),
-  .comments :global(.tk-submit__title) { margin: 0 0 16px; font-size: 19px; font-weight: 600; color: var(--ink); }
-  .comments :global(.tk-submit__title) { margin-top: 34px; }
-
-  /* 「N 条评论」被移到卡片外的背景格子上：字号放大、不要装饰横线。
-     它是 body 级的兄弟节点，选不中作用域，所以放到下面的全局样式里。 */
-
-  /* 去掉评论列表上方那排：搜索、刷新、设置、排序（管理入口改为页头连点 5 次） */
-  .comments :global(.tk-comments-actions) { display: none; }
-
-  /* 输入框：去掉 Twikoo 的空值红框（.tk-input input:invalid），统一成奶油底 */
-  .comments :global(.tk-input__inner),
-  .comments :global(.tk-textarea__inner) {
-    border: 1px solid #e3d8c9; border-radius: 6px; background: #fffdfa;
-    color: var(--ink); font-family: 'LXGW WenKai GB', 'Klee One', serif; font-size: 14px;
-  }
-  .comments :global(.tk-input input:invalid),
-  .comments :global(.tk-input__inner:invalid) { border-color: #e3d8c9; box-shadow: none; }
-  .comments :global(.tk-input__inner:focus),
-  .comments :global(.tk-textarea__inner:focus) { border-color: var(--accent); box-shadow: 0 0 0 3px #a45f2820; }
-  .comments :global(.tk-input__inner::placeholder),
-  .comments :global(.tk-textarea__inner::placeholder) { color: #b3a597; }
-  .comments :global(.tk-textarea__inner) { display: block; width: 100%; min-height: 104px; line-height: 1.75; }
-
-  /* 昵称/邮箱/网址：每个字段占一整行，标签色块与输入框同行、输入框占满剩余宽度 */
-  .comments :global(.tk-meta-input) { display: flex; flex-flow: column nowrap; gap: 10px; width: 100%; margin-bottom: 12px; }
-  .comments :global(.tk-meta-input__item) {
-    display: flex; flex-flow: row nowrap; align-items: center; gap: 0;
-    flex: none; width: 100%; min-width: 0; margin: 0;
-  }
-  /* 前缀色块只占内容宽度，别被 flex 拉宽 */
-  .comments :global(.tk-input-group__prepend) {
-    flex: none; width: max-content; padding: 0 11px; border: 1px solid #e3d8c9; border-right: 0;
-    border-radius: 6px 0 0 6px; background: var(--soft); color: #7d7062; font-size: 13px; white-space: nowrap;
-  }
-  .comments :global(.tk-meta-input__item .tk-input) { display: flex; flex: 1 1 auto; width: auto; min-width: 0; }
-  .comments :global(.tk-input--group .tk-input__inner) { flex: 1 1 0; width: auto; min-width: 0; border-radius: 0 6px 6px 0; }
-  .comments :global(.tk-input),
-  .comments :global(.tk-input__inner) { max-width: 100%; box-sizing: border-box; }
-
-  /* 提示文字（请填写昵称/邮箱）会撑破窄列，改为不占位、只在提交后才由浏览器提示 */
-  .comments :global(.tk-required-hint) { display: none; }
-
-  /* 底部：只保留字数与发送；表情、图片、Markdown、预览按钮都去掉。
-     注意 .tk-row-actions-start 里同时装着发送按钮，只能逐个隐藏图标。 */
-  .comments :global(.tk-row) { margin-top: 12px; }
-  .comments :global(.tk-submit .tk-avatar) { display: none; }
-  .comments :global(.tk-submit-action-icon),
-  .comments :global(.tk-input-image) { display: none; }
-  .comments :global(.tk-input__count) { color: #b3a597; font: 12px system-ui, sans-serif; }
-  .comments :global(.tk-send) { padding: 0 20px; min-height: 34px; font-family: 'LXGW WenKai GB', serif; }
-  /* 发送按钮靠右，跟表单右边缘对齐 */
-  .comments :global(.tk-submit .tk-row) { display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; }
-  .comments :global(.tk-submit .tk-col) { display: flex; flex-direction: column; flex: 1; width: 100%; }
-  .comments :global(.tk-submit .tk-input) { display: block; width: 100%; }
-  .comments :global(.tk-submit .tk-row.actions) { flex-direction: row; justify-content: flex-end; align-items: center; }
-  /* 发送按钮：Twikoo 同时带 tk-button--small，所以要用 .tk-button.tk-button--primary 提权 */
-  .comments :global(.tk-button.tk-button--primary) { border-color: var(--accent); background-color: var(--accent); color: #fff; }
-  .comments :global(.tk-button.tk-button--primary:hover) { border-color: #8f5222; background-color: #8f5222; }
-  /* 未填内容时发送按钮是禁用态，Twikoo 默认会露出 Element Plus 的蓝色 */
-  .comments :global(.tk-button.tk-button--primary.is-disabled),
-  .comments :global(.tk-button.tk-button--primary.is-disabled:hover) { border-color: #eddfcd; background-color: #eddfcd; color: #a2937f; }
-  /* 次要按钮（预览）也一并隐藏，只留发送 */
-  .comments :global(.tk-button.tk-button--small:not(.tk-button--primary)) { display: none; }
-
-  /* 头像：Twikoo 让图片 height:2.5rem(40px) 且绝对居中，框小于 40px 时会被裁切。
-     这里把图片改成填满容器并 object-fit:cover，圆形框与图片尺寸严格一致。 */
-  .comments :global(.tk-avatar) { width: 36px; height: 36px; flex: none; border: 1px solid var(--line); border-radius: 50%; background: var(--soft); }
-  .comments :global(.tk-comment .tk-avatar) { overflow: hidden; }
-  .comments :global(.tk-comment .tk-avatar-img) { position: static; height: 100%; line-height: 1; overflow: visible; }
-  .comments :global(img.tk-avatar-img) {
-    position: static; display: block; width: 100%; height: 100%;
-    max-width: 100%; object-fit: cover; border-radius: 50%;
-  }
-  .comments :global(.tk-avatar-img) { color: #b3a597; }
-  .comments :global(.tk-avatar-img .tk-icon),
-  .comments :global(.tk-avatar-img svg) { width: 100%; height: 100%; }
-
-  /* 评论列表：每条之间用浅虚线分隔，跟归档页一致 */
-  .comments :global(.tk-comment) { padding: 0; }
-  .comments :global(.tk-comment + .tk-comment) { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); }
-  .comments :global(.tk-comments-container) { margin-top: 6px; }
-  .comments :global(.tk-nick) { font-weight: 600; }
-  .comments :global(.tk-nick-link:hover strong) { color: var(--accent); }
-  .comments :global(.tk-time),
-  .comments :global(.tk-comments-count) { color: var(--muted); font: 12px system-ui, sans-serif; }
-  .comments :global(.tk-content) { margin-top: 5px; font-size: 15px; line-height: 1.75; }
-  .comments :global(.tk-tag) { border: 0; border-radius: 4px; background: var(--soft); color: var(--accent); font-size: 11px; padding: 0 5px; }
-  .comments :global(.tk-admin) { color: var(--muted); font: 12px system-ui, sans-serif; }
-
-  /* 页脚与分页 */
-  .comments :global(.tk-footer) { padding-top: 14px; margin-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font: 12px system-ui, sans-serif; }
-  .comments :global(.tk-footer a) { color: var(--muted); } .comments :global(.tk-footer a:hover) { color: var(--accent); }
-  .comments :global(.tk-pagination) { margin-top: 16px; font: 13px system-ui, sans-serif; }
-  .comments :global(.tk-pagination button) { border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); }
-  .comments :global(.tk-pagination button:disabled) { color: #c3b8ab; }
-</style>
-
-<style is:global>
-  /* 「N 条评论」移到卡片外的背景格子上：字号放大、去掉 Twikoo 的装饰横线 */
-  .comments-heading {
-    margin: 18px 0 0; padding-left: 8px;
-    font-family: 'LXGW WenKai GB', 'Klee One', 'KaiTi', serif;
-    font-size: 22px; font-weight: 600; color: var(--ink); letter-spacing: .01em;
-  }
-  .comments-heading::after,
-  .comments-heading::before { content: none !important; display: none !important; }
-  /* 排序（最新/最早/热门）装在标题里面，标题被移出卡片后要一并隐藏 */
-  .comments-heading .tk-comments-actions,
-  .comments-heading .tk-comments-sort,
-  .comments-heading .tk-sort-item,
-  .comments-heading .tk-comments-search { display: none !important; }
+  .comments :global(.tk-comment .tk-nick) { font-family: 'LXGW WenKai GB', serif; }
+  .comments :global(.tk-input) { border-color: #e3d8c9; }
+  .comments :global(.tk-input:focus) { border-color: #a45f28; box-shadow: 0 0 0 3px #a45f2820; }
+  .comments :global(.tk-meta-input .el-input__inner) { font-family: 'LXGW WenKai GB', serif; }
+  .comments :global(.tk-submit .el-button--primary),
+  .comments :global(.tk-row .el-button--primary) { border-color: #a45f28; background-color: #a45f28; }
+  .comments :global(.tk-submit .el-button--primary:hover),
+  .comments :global(.tk-row .el-button--primary:hover) { border-color: #8f5222; background-color: #8f5222; }
+  .comments :global(.tk-action-icon) { color: #897d6e; }
+  .comments :global(.tk-action-icon:hover) { color: #a45f28; }
+  .comments :global(.tk-admin) { color: #897d6e; }
+  .comments :global(.tk-required-hint) { display: block; margin-top: 2px; color: #a45f28; font: 12px system-ui, sans-serif; }
 </style>
