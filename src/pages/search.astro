@@ -2,7 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 <BaseLayout title="搜索" description="在纸上花园中搜索文章。">
-  <section class="search-head" data-pagefind-ignore>
+  <section class="page-head" data-pagefind-ignore>
     <p class="eyebrow">SEARCH</p>
     <h1 class="page-title">搜索文章</h1>
     <form class="search-form" role="search" action="/search" method="get" data-search-page-form>
@@ -173,6 +173,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       const frag = document.createDocumentFragment();
       items.forEach((item) => {
         const card = document.createElement('article');
+        card.className = 'card';
 
         const time = document.createElement('time');
         time.dateTime = item.date;
@@ -291,7 +292,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   })();
 </script>
 <style>
-  .search-head { margin:32px 0 18px; padding:31px 29px; border:1px solid var(--line); border-radius:8px; background:#fff; box-shadow:0 2px 6px #6a51310a; }
   .search-form { display:flex; gap:9px; margin:22px 0 0; }
   .search-form input { min-width:0; flex:1; height:40px; padding:0 13px; border:1px solid #d7b69a; border-radius:8px; outline:0; background:#fff; color:var(--ink); font:15px 'LXGW WenKai GB',serif; }
   .search-form input:focus { border-color:var(--accent); box-shadow:0 0 0 3px #a45f2820; }
@@ -299,11 +299,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   .search-form button { height:40px; padding:0 19px; border:0; border-radius:8px; background:var(--accent); color:#fff; font:15px 'LXGW WenKai GB',sans-serif; cursor:pointer; }
   .search-form button:hover { background:#8f5222; }
   .search-status { margin:19px 0 0; color:var(--muted); font:13px system-ui,sans-serif; }
-  @media(max-width:560px) { .search-head { padding:26px 20px 28px; } .search-form { flex-wrap:wrap; } .search-form input { flex:1 1 100%; } .search-form button { width:100%; } }
+  @media(max-width:560px) { .search-form { flex-wrap:wrap; } .search-form input { flex:1 1 100%; } .search-form button { width:100%; } }
 </style>
 <style is:global>
   /* Same article-card styling as the homepage list (src/components/PostList.astro). */
-  .post-list { display:grid; gap:18px; } .post-list article { padding:27px 29px 29px; border:1px solid var(--line); border-radius:8px; background:#fff; box-shadow:0 2px 6px #6a51310a; }
+  .post-list { display:grid; gap:18px; }
   .post-list time { color:var(--muted); font:12px system-ui, sans-serif; letter-spacing:.03em; }
   .post-list h2 { margin:8px 0 7px; font-size:25px; line-height:1.35; font-weight:600; } .post-list h2 a:hover { color:var(--accent); }
   .post-list p { margin:0; color:#59665f; font-size:15px; }

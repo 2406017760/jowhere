@@ -9,5 +9,11 @@ export async function getStaticPaths() {
 const { tag } = Astro.props;
 const posts = (await getCollection('posts', ({ data }) => !data.draft && data.tags.includes(tag))).sort((a,b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
 ---
-<BaseLayout title={`标签：${tag}`}><section class="tag-page"><p class="eyebrow">TAG</p><h1 class="page-title">#{tag}</h1><p class="page-intro">共 {posts.length} 篇文章。</p><PostList {posts} /></section></BaseLayout>
-<style>.tag-page { margin:32px 0 55px; padding:32px 29px; border:1px solid var(--line); border-radius:8px; background:#fff; box-shadow:0 2px 6px #6a51310a; }</style>
+<BaseLayout title={`标签：${tag}`}>
+  <section class="page-head">
+    <p class="eyebrow">TAG</p>
+    <h1 class="page-title">#{tag}</h1>
+    <p class="page-intro">共 {posts.length} 篇文章。</p>
+  </section>
+  <PostList {posts} />
+</BaseLayout>

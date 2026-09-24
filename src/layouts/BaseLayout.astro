@@ -36,8 +36,10 @@ const path = Astro.url.pathname;
   @import url('https://cdn.jsdelivr.net/npm/lxgw-wenkai-gb-web@latest/lxgwwenkaigb-regular/result.css');
   :root { --ink:#463d32; --muted:#897d6e; --line:#eee8df; --paper:#fbfaf7; --accent:#a45f28; --soft:#f8f1e7; }
   * { box-sizing:border-box; }
-  html { background:var(--paper); }
-  body { margin:0; color:var(--ink); font:17px/1.75 'LXGW WenKai GB', 'Klee One', 'KaiTi', serif; -webkit-font-smoothing:antialiased; background-color:var(--paper); background-image:linear-gradient(#dbba9830 1px, transparent 1px), linear-gradient(90deg, #dbba9830 1px, transparent 1px); background-size:25px 25px; }
+  /* Reserve the scrollbar gutter on every page so short pages (归档/标签) keep the
+     same content width and title position as pages that scroll. */
+  html { background:var(--paper); scrollbar-gutter:stable; }
+  body { margin:0; color:var(--ink); font:17px/1.75 'LXGW WenKai GB', 'Klee One', 'KaiTi', serif; -webkit-font-smoothing:antialiased; background-color:var(--paper); background-image:linear-gradient(#dbba9830 1px, transparent 1px), linear-gradient(90deg, #dbba9830 1px, transparent 1px); background-size:25px 25px; overflow-x:clip; }
   a { color:inherit; text-decoration:none; }
   .site-header, main, footer { width:min(800px, calc(100% - 40px)); margin:auto; }
   .site-header { position:sticky; top:0; z-index:10; display:flex; justify-content:space-between; align-items:center; padding:23px 0 20px; background:#fafaf8; box-shadow:0 0 0 100vmax #fafaf8; clip-path:inset(0 -100vmax); }
@@ -48,7 +50,11 @@ const path = Astro.url.pathname;
   footer { display:flex; justify-content:space-between; padding:30px 0 48px; border-top:1px solid var(--line); color:var(--muted); font:13px/1.5 system-ui, sans-serif; }
   footer p { margin:0; } footer a:hover { color:var(--accent); }
   .eyebrow { margin:0 0 10px; color:var(--accent); letter-spacing:.12em; font:12px system-ui, sans-serif; text-transform:uppercase; }
-  .page-title { margin:0; font-size:36px; line-height:1.25; letter-spacing:.02em; }
-  .page-intro { margin:12px 0 38px; color:var(--muted); }
-  @media (max-width:560px) { .site-header { padding-top:24px; flex-direction:column; align-items:flex-start; gap:16px; } nav { gap:17px; } .page-title { font-size:30px; } footer { flex-direction:column; gap:8px; } }
+  /* Every page is a header card followed by full-width content cards, so the
+     content width and the title position are identical on 文章/归档/标签. */
+  .page-head { margin:32px 0 18px; padding:31px 29px; border:1px solid var(--line); border-radius:8px; background:#fff; box-shadow:0 2px 6px #6a51310a; }
+  .card { padding:27px 29px 29px; border:1px solid var(--line); border-radius:8px; background:#fff; box-shadow:0 2px 6px #6a51310a; }
+  .page-title { margin:0; font-size:39px; line-height:1.35; letter-spacing:.02em; font-weight:600; }
+  .page-intro { margin:13px 0 0; color:var(--muted); }
+  @media (max-width:560px) { .site-header { padding-top:24px; flex-direction:column; align-items:flex-start; gap:16px; } nav { gap:17px; } .page-title { font-size:32px; } footer { flex-direction:column; gap:8px; } }
 </style>
