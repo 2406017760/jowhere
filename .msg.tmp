@@ -1,9 +1,0 @@
-[revert] restore the plain Twikoo comment section
-
-评论区被连续多轮样式覆盖改坏了（卡片重排、标题搬移、按钮重着色、
-avatar 对齐 hack 等），全部回退到最初接入 Twikoo 时的干净实现：
-- src/components/Comments.astro 恢复为 Twikoo 默认外观 + 懒加载 + 必填校验
-- 文章页恢复 Comments 的原始位置，post-end 回到末尾
-
-保留不变：src/config.ts 的 comment.jowhere.cn、服务端 Worker/D1、
-管理密码与 IP 属地配置。
