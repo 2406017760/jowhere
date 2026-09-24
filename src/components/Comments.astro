@@ -13,10 +13,6 @@ const configured = Boolean(envId && envId.trim());
     ? <div id="twikoo" class="comments-body"></div>
     : <p class="comments-setup">评论服务尚未配置：在 <code>src/config.ts</code> 里把 <code>comment.envId</code> 填成你部署好的 Twikoo 云函数地址即可。</p>}
   <h2 class="tk-submit__title" data-comment-form-title hidden>添加新评论</h2>
-  <!-- 管理入口：右上角一个小齿轮，点击打开 Twikoo 管理面板 -->
-  <button type="button" class="comments-admin" data-comment-admin title="评论管理" aria-label="评论管理">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"></circle><path d="M12 3.2v2.2M12 18.6v2.2M3.2 12h2.2M18.6 12h2.2M5.8 5.8l1.6 1.6M16.6 16.6l1.6 1.6M18.2 5.8l-1.6 1.6M7.4 16.6l-1.6 1.6"></path></svg>
-  </button>
 </div>
 
 <script is:inline>
@@ -107,14 +103,36 @@ const configured = Boolean(envId && envId.trim());
     };
 
     // 管理入口（HIDE_ADMIN_CRYPT 暗号）只在昵称输入暗号时才由 Twikoo 渲染出来。
-    // 它和「排序/搜索/刷新」同在一排 .tk-comments-actions 里，
-    // 这里用监听器判断「这一排是否多出了管理图标」，给容器打标记，
-    // 交给 CSS 决定显示哪个（默认全隐，避免刷新图标被误显示）。
+    // 它和「排序/搜索/刷新」同在一排 .tk-comments-actions 里，这里判断
+    // 「这一排是否多出了管理图标」，给容器打标记，交给 CSS 决定显示哪个
+    // （默认全隐，否则刷新图标会被当成管理图标显示出来）。
+    // 注意 layoutTitle() 会把标题整块移到卡片外面，所以这排图标既可能在 #twikoo 里
+    // （还没搬），也可能在 root 的前一个兄弟节点里（已搬）。
+    const actionsRow = () => {
+      const heading = root.previousElementSibling;
+      if (heading && heading.classList && heading.classList.contains('comments-heading')) {
+        const row = heading.querySelector('.tk-comments-actions');
+        if (row) return row;
+      }
+      return root.querySelector('#twikoo .tk-comments-actions') ||
+        document.querySelector('.comments-heading .tk-comments-actions');
+    };
+
     const flagAdminEntry = () => {
-      const actions = root.querySelector('#twikoo .tk-comments-actions');
+      const actions = actionsRow();
       if (!actions) return;
+      // 这排图标固定是：[排序] [搜索] [刷新] (?)[管理]。Twikoo 只在昵称等于暗号时
+      // 追加第 3 个图标（cog），所以「图标数 >= 3」就是「暗号已输入」。
       const icons = actions.querySelectorAll(':scope > .tk-icon');
       actions.dataset.adminEntry = icons.length >= 3 ? '1' : '0';
+    };
+
+    // 常驻观察：暗号可能在页面加载很久之后才输入，轮询早停了，只能靠监听。
+    const watchedAdminRows = new WeakSet();
+    const watchActionsRow = (node) => {
+      if (!node || !('MutationObserver' in window) || watchedAdminRows.has(node)) return;
+      watchedAdminRows.add(node);
+      new MutationObserver(() => flagAdminEntry()).observe(node, { childList: true, subtree: true });
     };
 
     const watchAdminOpen = () => {
@@ -162,14 +180,10 @@ const configured = Boolean(envId && envId.trim());
       return true;
     };
 
-    // 外部触发入口：评论卡片右上角的小齿轮，或
+    // 外部触发入口（不再放常驻按钮，管理入口用 Twikoo 自带的暗号图标）：
     // document.dispatchEvent(new Event('comments:admin-open'))
     document.addEventListener('comments:admin-open', openAdminPanel);
     window.openTwikooAdmin = openAdminPanel;
-    // 事件委托：即使按钮被重建或重绘，点击依然有效
-    document.addEventListener('click', (event) => {
-      if (event.target.closest('[data-comment-admin]')) openAdminPanel();
-    });
 
     // 表单字段的排版必须可靠生效：Twikoo 是运行时注入样式，同权重时会盖掉静态 CSS，
     // 这里用一段带 !important 的动态样式兜底，规则永远赢。
@@ -239,17 +253,20 @@ const configured = Boolean(envId && envId.trim());
       #twikoo .tk-sort-item,
       #twikoo .tk-comments-search,
       #twikoo .tk-comments-actions > .tk-icon,
+      .comments-heading .tk-comments-actions > .tk-icon,
       #twikoo .tk-submit-action-icon,
       #twikoo .tk-input-image,
       #twikoo .tk-preview,
       #twikoo .tk-required-hint { display: none !important; }
-      #twikoo .tk-comments-actions[data-admin-entry="1"] > .tk-icon:last-child {
+      #twikoo .tk-comments-actions[data-admin-entry="1"] > .tk-icon:last-child,
+      .comments-heading .tk-comments-actions[data-admin-entry="1"] > .tk-icon:last-child {
         display: inline-flex !important;
         align-items: center !important; justify-content: center !important;
         width: 1rem !important; height: 1rem !important;
         color: var(--accent) !important; cursor: pointer !important;
       }
-      #twikoo .tk-comments-actions[data-admin-entry="1"] > .tk-icon:last-child svg {
+      #twikoo .tk-comments-actions[data-admin-entry="1"] > .tk-icon:last-child svg,
+      .comments-heading .tk-comments-actions[data-admin-entry="1"] > .tk-icon:last-child svg {
         width: 1rem !important; height: 1rem !important;
       }
       /* 「取消」常驻在发送左侧（Twikoo 默认只在回复时渲染） */
@@ -284,6 +301,7 @@ const configured = Boolean(envId && envId.trim());
         title.style.margin = '16px 0 8px';
         root.parentNode.insertBefore(title, root);
         root.style.marginTop = '18px';
+        watchActionsRow(title);
         const article = root.previousElementSibling;
         if (article && article.classList.contains('comments-heading')) {
           const post = article.previousElementSibling;
@@ -359,11 +377,9 @@ const configured = Boolean(envId && envId.trim());
         path: root.dataset.commentPath,
         lang: root.dataset.commentLang,
       });
-      // 输入暗号可能在很久之后，所以用监听器常驻观察这排图标的变化
-      const host = document.getElementById('twikoo');
-      if (host && 'MutationObserver' in window) {
-        new MutationObserver(() => flagAdminEntry()).observe(host, { childList: true, subtree: true });
-      }
+      // 输入暗号可能在很久之后，所以用监听器常驻观察这排图标的变化。
+      // 标题被搬到卡片外之后，图标变动发生在 .comments-heading 里，所以两处都要看。
+      watchActionsRow(document.getElementById('twikoo'));
       // 每 250ms 检查一次，最多 40 次（约 10 秒），到位后立即停止。
       let tries = 0;
       const timer = setInterval(() => {
@@ -416,18 +432,8 @@ const configured = Boolean(envId && envId.trim());
   .comments-setup { margin: 0; padding: 15px 17px; border: 1px dashed #d7b69a; border-radius: 8px; background: var(--soft); color: var(--muted); font: 14px/1.7 system-ui, sans-serif; }
   .comments-setup code { padding: .12em .35em; background: #fff; font: 13px ui-monospace, monospace; }
 
-  /* 评论卡片右上角的管理入口（小齿轮）：平时很淡，悬停变主题色 */
+  /* 评论卡片 */
   .comments { position: relative; }
-  .comments-admin {
-    position: absolute; top: 22px; right: 22px; z-index: 3;
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 30px; height: 30px; padding: 0;
-    border: 1px solid transparent; border-radius: 50%;
-    background: transparent; color: #cfc4b6; cursor: pointer;
-    transition: color .15s, border-color .15s, background .15s;
-  }
-  .comments-admin:hover { color: var(--accent); border-color: #e3d8c9; background: #fff; }
-  .comments-admin svg { width: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
 
   /* Twikoo 自带样式是通用蓝紫配色，这里整体调成站点的暖纸配色。 */
   .comments :global(.twikoo) { font-family: 'LXGW WenKai GB', 'Klee One', 'KaiTi', serif; }
@@ -537,12 +543,12 @@ const configured = Boolean(envId && envId.trim());
   }
   .comments-heading::after,
   .comments-heading::before { content: none !important; display: none !important; }
-  /* 标题被移出卡片后，排序（最新/最早/热门）与搜索要一并隐藏；
-     但管理入口图标也在这排里，必须保留，所以只隐藏排序与搜索/刷新。 */
+  /* 标题被移出卡片后，排序（最新/最早/热门）与搜索框要一并隐藏。
+     那排图标（搜索/刷新/管理）交给 FORM_LAYOUT_CSS 统一处理：
+     默认全隐，只有暗号匹配、多出管理图标时才显示最后一个。 */
   .comments-heading .tk-comments-sort,
   .comments-heading .tk-sort-item,
-  .comments-heading .tk-comments-search,
-  .comments-heading .tk-comments-actions > .tk-icon.__comments:not(:last-child) { display: none !important; }
+  .comments-heading .tk-comments-search { display: none !important; }
   /* 去掉评论区底部的「Powered by Twikoo」 */
   #twikoo .tk-footer { display: none !important; }
 </style>
