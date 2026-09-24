@@ -32,15 +32,14 @@ const configured = Boolean(envId && envId.trim());
     if (!root) return;
     const envId = (root.dataset.envId || '').trim();
 
-    // Twikoo 默认昵称、邮箱、网址都必填；这里做成昵称必填、邮箱必填、网址选填。
-    // 真实结构是 Element Plus 的包装：.tk-input > .el-input__inner，标签是
-    // .tk-input-group__prepend 里的纯文本，字段实例上带有 name/type 属性。
+    // 字段规则：昵称、邮箱必填，网址选填；label 只用纯名称，必填/选填写进 placeholder。
     const FIELD_RULES = [
-      { name: 'nick', hint: '请填写昵称', type: 'text', autocomplete: 'nickname' },
-      { name: 'mail', hint: '请填写邮箱（不会公开）', type: 'email', autocomplete: 'email' },
-      { name: 'link', hint: '', type: 'url', autocomplete: 'url' },
+      { name: 'nick', label: '昵称', hint: '请填写昵称', type: 'text', autocomplete: 'nickname' },
+      { name: 'mail', label: '邮箱', hint: '请填写邮箱（不会公开）', type: 'email', autocomplete: 'email' },
+      { name: 'link', label: '网址', hint: '', type: 'url', autocomplete: 'url' },
     ];
 
+    // 昵称/邮箱/网址：只在输入框内用 placeholder 标明必填/选填，标签保持简洁。
     const applyRequiredRule = () => {
       FIELD_RULES.forEach((rule) => {
         const input = root.querySelector(`.tk-meta-input input[name="${rule.name}"]`)
@@ -54,18 +53,11 @@ const configured = Boolean(envId && envId.trim());
         input.required = required;
         input.type = rule.type;
         input.autocomplete = rule.autocomplete;
+        // 必填/选填写进输入框提示，标签只用纯名称
+        input.placeholder = required ? '必填' : '选填';
 
-        const label = item.querySelector('.tk-input-group__prepend') || item.querySelector('label');
-        if (label) label.append(required ? '（必填）' : '（选填）');
-
-        if (!required) return;
-        const hint = document.createElement('span');
-        hint.className = 'tk-required-hint';
-        hint.textContent = rule.hint;
-        item.append(hint);
-        input.addEventListener('input', () => {
-          hint.textContent = input.value.trim() ? '' : rule.hint;
-        });
+        const label = item.querySelector('.tk-input-group__prepend');
+        if (label) label.textContent = rule.label;
       });
     };
 
@@ -123,8 +115,8 @@ const configured = Boolean(envId && envId.trim());
       #twikoo .tk-meta-input__item { display: flex !important; flex-direction: row !important; align-items: center !important; width: 100% !important; }
       #twikoo .tk-meta-input__item .tk-input-group__prepend { flex: none !important; width: max-content !important; }
       #twikoo .tk-meta-input__item .tk-input { flex: 1 1 auto !important; width: auto !important; min-width: 0 !important; }
-      #twikoo .tk-meta-input__item .tk-input__inner { flex: 1 1 0 !important; width: auto !important; min-width: 0 !important; }
-      #twikoo .tk-textarea__inner { display: block !important; width: 100% !important; }
+      #twikoo .tk-meta-input__item .tk-input__inner { flex: 1 1 0 !important; width: auto !important; min-width: 0 !important; padding-left: 10px !important; padding-right: 10px !important; }
+      #twikoo .tk-textarea__inner { display: block !important; width: 100% !important; padding: 8px 10px !important; }
       #twikoo .tk-comments-actions { display: none !important; }
       #twikoo .tk-submit-action-icon, #twikoo .tk-input-image, #twikoo .tk-preview { display: none !important; }
     `;
@@ -184,9 +176,9 @@ const configured = Boolean(envId && envId.trim());
 </script>
 
 <style>
-  /* 评论区做成独立卡片：与文章之间露出背景格子，间距取文章卡片间距 18px */
+  /* 评论区做成独立卡片：宽度与文章卡片一致，之间露出背景格子（18px） */
   .comments {
-    box-sizing: border-box; margin: 18px 0 0; padding: 30px 29px 32px;
+    box-sizing: border-box; width: 100%; margin: 18px 0 0; padding: 30px 40px 34px;
     border: 1px solid var(--line); border-radius: 8px; background: #fff; box-shadow: 0 2px 6px #6a51310a;
   }
   .comments-title { margin: 0 0 16px; font-size: 22px; font-weight: 600; }
