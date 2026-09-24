@@ -13,6 +13,10 @@ const configured = Boolean(envId && envId.trim());
     ? <div id="twikoo" class="comments-body"></div>
     : <p class="comments-setup">评论服务尚未配置：在 <code>src/config.ts</code> 里把 <code>comment.envId</code> 填成你部署好的 Twikoo 云函数地址即可。</p>}
   <h2 class="tk-submit__title" data-comment-form-title hidden>添加新评论</h2>
+  <!-- 管理入口：右上角一个小齿轮，点击打开 Twikoo 管理面板 -->
+  <button type="button" class="comments-admin" data-comment-admin title="评论管理" aria-label="评论管理">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"></circle><path d="M12 3.2v2.2M12 18.6v2.2M3.2 12h2.2M18.6 12h2.2M5.8 5.8l1.6 1.6M16.6 16.6l1.6 1.6M18.2 5.8l-1.6 1.6M7.4 16.6l-1.6 1.6"></path></svg>
+  </button>
 </div>
 
 <script is:inline>
@@ -146,10 +150,14 @@ const configured = Boolean(envId && envId.trim());
       return true;
     };
 
-    // 外部触发入口：document.dispatchEvent(new Event('comments:admin-open'))
+    // 外部触发入口：评论卡片右上角的小齿轮，或
+    // document.dispatchEvent(new Event('comments:admin-open'))
     document.addEventListener('comments:admin-open', openAdminPanel);
-    // 同时挂到 window 上，方便在控制台或配置里直接调用
     window.openTwikooAdmin = openAdminPanel;
+    // 事件委托：即使按钮被重建或重绘，点击依然有效
+    document.addEventListener('click', (event) => {
+      if (event.target.closest('[data-comment-admin]')) openAdminPanel();
+    });
 
     // 表单字段的排版必须可靠生效：Twikoo 是运行时注入样式，同权重时会盖掉静态 CSS，
     // 这里用一段带 !important 的动态样式兜底，规则永远赢。
@@ -378,6 +386,19 @@ const configured = Boolean(envId && envId.trim());
   .comments-title { margin: 0 0 16px; font-size: 22px; font-weight: 600; }
   .comments-setup { margin: 0; padding: 15px 17px; border: 1px dashed #d7b69a; border-radius: 8px; background: var(--soft); color: var(--muted); font: 14px/1.7 system-ui, sans-serif; }
   .comments-setup code { padding: .12em .35em; background: #fff; font: 13px ui-monospace, monospace; }
+
+  /* 评论卡片右上角的管理入口（小齿轮）：平时很淡，悬停变主题色 */
+  .comments { position: relative; }
+  .comments-admin {
+    position: absolute; top: 22px; right: 22px; z-index: 3;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; padding: 0;
+    border: 1px solid transparent; border-radius: 50%;
+    background: transparent; color: #cfc4b6; cursor: pointer;
+    transition: color .15s, border-color .15s, background .15s;
+  }
+  .comments-admin:hover { color: var(--accent); border-color: #e3d8c9; background: #fff; }
+  .comments-admin svg { width: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
 
   /* Twikoo 自带样式是通用蓝紫配色，这里整体调成站点的暖纸配色。 */
   .comments :global(.twikoo) { font-family: 'LXGW WenKai GB', 'Klee One', 'KaiTi', serif; }
