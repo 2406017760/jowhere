@@ -112,6 +112,9 @@ const configured = Boolean(envId && envId.trim());
           return;
         }
         admin.classList.add('__show');
+        // Twikoo 的请求遮罩有时不会被清掉（我们移动过它的节点），会一直盖在面板上
+        // 让人以为「一直在加载」。面板内容其实已经渲染好，这里把残留遮罩移除。
+        admin.querySelectorAll('.tk-loading-mask').forEach((mask) => mask.remove());
       });
     };
 
@@ -146,8 +149,16 @@ const configured = Boolean(envId && envId.trim());
       #twikoo .tk-comment .tk-main > .tk-row:first-child .tk-meta { height: 36px !important; align-items: center !important; }
       /* 行内回复表单：字段左边缘与主表单的标签对齐 */
       #twikoo .tk-comment .tk-submit { margin-left: -29px !important; }
-      /* 系统/浏览器信息只留图标，隐去带版本号的文字 */
-      #twikoo .tk-extra-text { display: none !important; }
+      /* 系统/浏览器信息：保留系统版本（如 iOS 26.6），隐去浏览器版本号
+         （版本号在隐藏的原始 UA 文本里，可见文字只有「系统」和「浏览器」两类） */
+      #twikoo .tk-extra-text { display: block !important; }
+      #twikoo .tk-extra[data-ua="browser"] .tk-extra-text { display: none !important; }
+      /* 行内回复表单：标签等高，保证三个字段的输入框左边缘对齐 */
+      #twikoo .tk-comment .tk-submit .tk-input-group__prepend {
+        width: 4.6em !important; min-width: 4.6em !important; text-align: center !important;
+      }
+      /* 行内回复表单：字段左边缘与主表单标签对齐 */
+      #twikoo .tk-comment .tk-submit { margin-left: -29px !important; }
       #twikoo .tk-meta-input { display: flex !important; flex-direction: column !important; gap: 10px !important; }
       #twikoo .tk-meta-input__item { display: flex !important; flex-direction: row !important; align-items: center !important; width: 100% !important; }
       #twikoo .tk-meta-input__item .tk-input-group__prepend { flex: none !important; width: 4.6em !important; min-width: 4.6em !important; text-align: center !important; }
@@ -211,6 +222,26 @@ const configured = Boolean(envId && envId.trim());
       }
     };
 
+    // 系统/浏览器信息：
+    // 第 1 项是系统（保留版本，如 iOS 26.6），第 2 项是浏览器（去掉版本号）。
+    // 给浏览器那项打标记交给 CSS 隐藏文字；同时兜底清掉残留的版本号。
+    const BROWSER_RE = /(Chrome|Safari|Firefox|Edge|Opera|HeadlessChrome|MSIE|Trident)/i;
+    const cleanExtraLine = () => {
+      root.querySelectorAll('#twikoo .tk-extra').forEach((extra) => {
+        const textEl = extra.querySelector('.tk-extra-text');
+        if (!textEl) return;
+        const text = (textEl.textContent || '').trim();
+        if (!text) return;
+        if (BROWSER_RE.test(text)) {
+          extra.dataset.ua = 'browser';
+          const stripped = text.replace(/\s*\d+(\.\d+)*\s*/g, '').trim();
+          if (stripped && stripped !== text) textEl.textContent = stripped;
+        } else {
+          delete extra.dataset.ua;
+        }
+      });
+    };
+
     // 「取消」常驻在发送左侧（Twikoo 只在回复时才渲染这个按钮）
     const ensureCancelButton = () => {
       const submit = root.querySelector('#twikoo .tk-submit');
@@ -255,6 +286,7 @@ const configured = Boolean(envId && envId.trim());
         layoutTitle();
         applyRequiredRule();
         ensureCancelButton();
+        cleanExtraLine();
         tries += 1;
         if ((placed && tries > 4) || tries > 40) clearInterval(timer);
       }, 250);
