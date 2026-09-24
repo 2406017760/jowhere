@@ -113,7 +113,7 @@ const configured = Boolean(envId && envId.trim());
     const FORM_LAYOUT_CSS = `
       #twikoo .tk-meta-input { display: flex !important; flex-direction: column !important; gap: 10px !important; }
       #twikoo .tk-meta-input__item { display: flex !important; flex-direction: row !important; align-items: center !important; width: 100% !important; }
-      #twikoo .tk-meta-input__item .tk-input-group__prepend { flex: none !important; width: max-content !important; }
+      #twikoo .tk-meta-input__item .tk-input-group__prepend { flex: none !important; width: 4.6em !important; min-width: 4.6em !important; text-align: center !important; }
       #twikoo .tk-meta-input__item .tk-input { flex: 1 1 auto !important; width: auto !important; min-width: 0 !important; }
       #twikoo .tk-meta-input__item .tk-input__inner { flex: 1 1 0 !important; width: auto !important; min-width: 0 !important; padding-left: 10px !important; padding-right: 10px !important; }
       #twikoo .tk-textarea__inner { display: block !important; width: 100% !important; padding: 8px 10px !important; }
@@ -127,6 +127,14 @@ const configured = Boolean(envId && envId.trim());
       #twikoo .tk-input-image,
       #twikoo .tk-preview,
       #twikoo .tk-required-hint { display: none !important; }
+      /* 「取消」常驻在发送左侧（Twikoo 默认只在回复时渲染） */
+      #twikoo .tk-submit .tk-cancel {
+        display: inline-flex !important; align-items: center !important;
+        margin-right: 8px !important; height: 34px !important; padding: 0 16px !important;
+        border: 1px solid #e3d8c9 !important; border-radius: 6px !important;
+        background: #fff !important; color: var(--ink) !important; font-family: 'LXGW WenKai GB', serif !important;
+      }
+      #twikoo .tk-submit .tk-cancel:hover { border-color: var(--accent) !important; color: var(--accent) !important; }
     `;
     const applyLayoutStyles = () => {
       if (document.getElementById('tk-layout-overrides')) return;
@@ -166,6 +174,33 @@ const configured = Boolean(envId && envId.trim());
       }
     };
 
+    // 「取消」常驻在发送左侧（Twikoo 只在回复时才渲染这个按钮）
+    const ensureCancelButton = () => {
+      const submit = root.querySelector('#twikoo .tk-submit');
+      const send = submit?.querySelector('.tk-send');
+      if (!submit || !send || root.querySelector('#twikoo .tk-submit .tk-cancel')) return;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'tk-button tk-button--small tk-cancel';
+      btn.textContent = '取消';
+      btn.addEventListener('click', () => {
+        const textarea = submit.querySelector('textarea');
+        if (textarea) {
+          textarea.value = '';
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        ['nick', 'mail', 'link'].forEach((name) => {
+          const input = submit.querySelector(`input[name="${name}"]`);
+          if (input) {
+            input.value = '';
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        });
+        textarea?.focus();
+      });
+      send.parentElement.insertBefore(btn, send);
+    };
+
     const mount = () => {
       if (!window.twikoo) return;
       applyLayoutStyles();
@@ -182,6 +217,7 @@ const configured = Boolean(envId && envId.trim());
         const placed = layoutForm();
         layoutTitle();
         applyRequiredRule();
+        ensureCancelButton();
         tries += 1;
         if ((placed && tries > 4) || tries > 40) clearInterval(timer);
       }, 250);
@@ -345,7 +381,7 @@ const configured = Boolean(envId && envId.trim());
 <style is:global>
   /* 「N 条评论」移到卡片外的背景格子上：字号放大、去掉 Twikoo 的装饰横线 */
   .comments-heading {
-    margin: 18px 0 0;
+    margin: 18px 0 0; padding-left: 8px;
     font-family: 'LXGW WenKai GB', 'Klee One', 'KaiTi', serif;
     font-size: 22px; font-weight: 600; color: var(--ink); letter-spacing: .01em;
   }
