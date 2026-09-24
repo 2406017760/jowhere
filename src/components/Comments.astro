@@ -303,7 +303,8 @@ const configured = Boolean(envId && envId.trim());
       try {
         title.classList.remove('tk-comments-title');
         title.classList.add('comments-heading');
-        title.style.margin = '16px 0 8px';
+        // 上间距要明显大于下间距（标题归到下面的评论区，和上面的文章拉开）
+        title.style.margin = '28px 0 8px';
         root.parentNode.insertBefore(title, root);
         root.style.marginTop = '18px';
         watchActionsRow(title);
@@ -542,7 +543,7 @@ const configured = Boolean(envId && envId.trim());
 <style is:global>
   /* 「N 条评论」移到卡片外的背景格子上：字号放大、去掉 Twikoo 的装饰横线 */
   .comments-heading {
-    margin: 18px 0 0; padding-left: 8px;
+    margin: 28px 0 8px; padding-left: 8px;
     font-family: 'LXGW WenKai GB', 'Klee One', 'KaiTi', serif;
     font-size: 22px; font-weight: 600; color: var(--ink); letter-spacing: .01em;
   }
