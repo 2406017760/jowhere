@@ -106,9 +106,21 @@ const configured = Boolean(envId && envId.trim());
       return true;
     };
 
+    // 管理入口（HIDE_ADMIN_CRYPT 暗号）只在昵称输入暗号时才由 Twikoo 渲染出来。
+    // 它和「排序/搜索/刷新」同在一排 .tk-comments-actions 里，
+    // 这里用监听器判断「这一排是否多出了管理图标」，给容器打标记，
+    // 交给 CSS 决定显示哪个（默认全隐，避免刷新图标被误显示）。
+    const flagAdminEntry = () => {
+      const actions = root.querySelector('#twikoo .tk-comments-actions');
+      if (!actions) return;
+      const icons = actions.querySelectorAll(':scope > .tk-icon');
+      actions.dataset.adminEntry = icons.length >= 3 ? '1' : '0';
+    };
+
     const watchAdminOpen = () => {
       const admin = root.querySelector('#twikoo .tk-admin');
       if (!admin) return false;
+      flagAdminEntry();
 
       // 关闭兜底写上的内联 display:none 会在下次打开时残留，导致「开了却看不见」。
       // 这里监听 __show 类变化，一打开就把它清掉（与何时打开无关）。
@@ -221,15 +233,25 @@ const configured = Boolean(envId && envId.trim());
       #twikoo .tk-textarea__inner { display: block !important; width: 100% !important; padding: 8px 10px !important; }
       /* 无用元素：排序、搜索、刷新、表情、图片、Markdown、预览、必填提示。
          注意：管理入口（HIDE_ADMIN_CRYPT 暗号触发）也在这排 .tk-comments-actions 里，
-         所以不能整排隐藏，只隐藏排序与搜索/刷新，保留管理图标。 */
+         而且是最后一个图标。策略：这排图标默认全部隐藏，
+         只有「管理图标出现」时（容器带 data-admin-entry）才显示它，尺寸也压小一些。 */
       #twikoo .tk-comments-sort,
       #twikoo .tk-sort-item,
       #twikoo .tk-comments-search,
-      #twikoo .tk-comments-actions > .tk-icon.__comments:not(:last-child),
+      #twikoo .tk-comments-actions > .tk-icon,
       #twikoo .tk-submit-action-icon,
       #twikoo .tk-input-image,
       #twikoo .tk-preview,
       #twikoo .tk-required-hint { display: none !important; }
+      #twikoo .tk-comments-actions[data-admin-entry="1"] > .tk-icon:last-child {
+        display: inline-flex !important;
+        align-items: center !important; justify-content: center !important;
+        width: 1rem !important; height: 1rem !important;
+        color: var(--accent) !important; cursor: pointer !important;
+      }
+      #twikoo .tk-comments-actions[data-admin-entry="1"] > .tk-icon:last-child svg {
+        width: 1rem !important; height: 1rem !important;
+      }
       /* 「取消」常驻在发送左侧（Twikoo 默认只在回复时渲染） */
       #twikoo .tk-submit .tk-cancel {
         display: inline-flex !important; align-items: center !important;
@@ -337,12 +359,18 @@ const configured = Boolean(envId && envId.trim());
         path: root.dataset.commentPath,
         lang: root.dataset.commentLang,
       });
+      // 输入暗号可能在很久之后，所以用监听器常驻观察这排图标的变化
+      const host = document.getElementById('twikoo');
+      if (host && 'MutationObserver' in window) {
+        new MutationObserver(() => flagAdminEntry()).observe(host, { childList: true, subtree: true });
+      }
       // 每 250ms 检查一次，最多 40 次（约 10 秒），到位后立即停止。
       let tries = 0;
       const timer = setInterval(() => {
         const placed = layoutForm();
         layoutTitle();
         watchAdminOpen();
+        flagAdminEntry();
         applyRequiredRule();
         ensureCancelButton();
         cleanExtraLine();
