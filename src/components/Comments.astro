@@ -93,6 +93,12 @@ const configured = Boolean(envId && envId.trim());
 
     // 管理入口：页头中间一大片可点击区域（品牌与导航之间），连点 5 次打开管理面板。
     // Twikoo 的管理面板靠给 .tk-admin 加 __show 类显示（该节点一直存在于 DOM 中）。
+    // 请求遮罩（.tk-loading-mask）因为节点被移动过，有时不会被清掉，这里统一兜底移除。
+    const clearAdminMask = () => {
+      root.querySelectorAll('#twikoo .tk-admin .tk-loading-mask').forEach((mask) => mask.remove());
+    };
+    let maskGuard = 0;
+
     const bindAdminGesture = () => {
       const trigger = document.querySelector('[data-admin-hotspot]');
       if (!trigger) return;
@@ -112,9 +118,15 @@ const configured = Boolean(envId && envId.trim());
           return;
         }
         admin.classList.add('__show');
-        // Twikoo 的请求遮罩有时不会被清掉（我们移动过它的节点），会一直盖在面板上
-        // 让人以为「一直在加载」。面板内容其实已经渲染好，这里把残留遮罩移除。
-        admin.querySelectorAll('.tk-loading-mask').forEach((mask) => mask.remove());
+        clearAdminMask();
+        // 登录等操作会重新挂上遮罩，而 Twikoo 的清除回调因为节点被移动过不一定跑得到，
+        // 所以打开面板后持续守护一段时间（约 30 秒），把残留遮罩移除。
+        clearInterval(maskGuard);
+        let guardTicks = 0;
+        maskGuard = setInterval(() => {
+          clearAdminMask();
+          if (++guardTicks > 120 || !admin.classList.contains('__show')) clearInterval(maskGuard);
+        }, 250);
       });
     };
 
@@ -123,24 +135,25 @@ const configured = Boolean(envId && envId.trim());
     const FORM_LAYOUT_CSS = `
       /* 按钮统一圆角（Twikoo 的 .tk-button 默认是直角） */
       #twikoo .tk-button { border-radius: 6px !important; }
-      /* 发送按钮：两个状态都是主题橙实底，边框与「取消」一致、不要阴影
-         可用态 = 不透明；禁用态 = 同样颜色 30% 透明度 */
+      /* 发送按钮：两个状态都是柔和的暖橙实底，边框与「取消」一致、不要阴影
+         可用态 = 不透明；禁用态 = 同样颜色 30% 透明度
+         主色 #a45f28 用在按钮上偏重，这里取浅一档的 #c08a55 */
       #twikoo .tk-submit .tk-send,
       #twikoo .tk-submit .tk-send.tk-button--primary {
         box-shadow: none !important;
         border: 1px solid #e3d8c9 !important;
-        background-color: #a45f28 !important;
+        background-color: #c08a55 !important;
         color: #fff !important;
         border-radius: 6px !important;
         opacity: 1 !important;
       }
       #twikoo .tk-submit .tk-send:hover:not(.is-disabled) {
-        background-color: #8f5222 !important;
+        background-color: #b07a45 !important;
         border-color: #e3d8c9 !important;
       }
       #twikoo .tk-submit .tk-send.is-disabled,
       #twikoo .tk-submit .tk-send.is-disabled:hover {
-        background-color: #a45f28 !important;
+        background-color: #c08a55 !important;
         border-color: #e3d8c9 !important;
         color: #fff !important;
         box-shadow: none !important;
