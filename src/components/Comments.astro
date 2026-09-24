@@ -14,22 +14,6 @@ const configured = Boolean(envId && envId.trim());
     : <p class="comments-setup">评论服务尚未配置：在 <code>src/config.ts</code> 里把 <code>comment.envId</code> 填成你部署好的 Twikoo 云函数地址即可。</p>}
   <h2 class="tk-submit__title" data-comment-form-title hidden>添加新评论</h2>
 </div>
-<!-- 管理入口：页头中间的小点，连点 5 次打开 Twikoo 管理面板 -->
-<button type="button" class="admin-hotspot" data-admin-hotspot title="连点 5 次管理评论区" aria-label="管理评论区（连点 5 次）"></button>
-<script is:inline>
-  (() => {
-    // 把热区插到页头品牌与导航之间，占满中间整片空白
-    const hotspot = document.querySelector('[data-admin-hotspot]');
-    const header = document.querySelector('.site-header');
-    const nav = header && header.querySelector('nav');
-    if (hotspot && header && nav) {
-      header.insertBefore(hotspot, nav);
-      hotspot.title = '连点 5 次管理评论区';
-      hotspot.addEventListener('mouseenter', () => { hotspot.dataset.tip = '1'; });
-      hotspot.addEventListener('mouseleave', () => { delete hotspot.dataset.tip; });
-    }
-  })();
-</script>
 
 <script is:inline>
   (() => {
@@ -91,43 +75,54 @@ const configured = Boolean(envId && envId.trim());
       return true;
     };
 
-    // 管理入口：页头中间一大片可点击区域（品牌与导航之间），连点 5 次打开管理面板。
-    // Twikoo 的管理面板靠给 .tk-admin 加 __show 类显示（该节点一直存在于 DOM 中）。
-    // 请求遮罩（.tk-loading-mask）因为节点被移动过，有时不会被清掉，这里统一兜底移除。
+    // 管理面板的辅助处理：
+    // 1) 请求遮罩（.tk-loading-mask）因为节点被移动过，Twikoo 的清除回调有时跑不到，
+    //    会一直盖在面板上；这里在面板打开期间低频移除残留遮罩。
+    // 2) 关闭按钮（×）的关闭回调同样受节点移动影响，点不动；补一个兜底关闭。
     const clearAdminMask = () => {
       root.querySelectorAll('#twikoo .tk-admin .tk-loading-mask').forEach((mask) => mask.remove());
     };
-    let maskGuard = 0;
 
-    const bindAdminGesture = () => {
-      const trigger = document.querySelector('[data-admin-hotspot]');
-      if (!trigger) return;
-      let hits = 0;
-      let resetTimer;
-      trigger.addEventListener('click', () => {
-        hits += 1;
-        clearTimeout(resetTimer);
-        resetTimer = setTimeout(() => { hits = 0; trigger.dataset.hits = '0'; }, 2000);
-        trigger.dataset.hits = String(hits);
-        if (hits < 5) return;
-        hits = 0;
-        trigger.dataset.hits = '0';
-        const admin = root.querySelector('.tk-admin');
-        if (!admin) {
-          console.warn('[comments] Twikoo 管理面板尚未就绪，请等评论区加载完成后再试');
-          return;
-        }
-        admin.classList.add('__show');
-        clearAdminMask();
-        // 登录等操作会重新挂上遮罩，而 Twikoo 的清除回调因为节点被移动过不一定跑得到，
-        // 所以打开面板后持续守护一段时间（约 30 秒），把残留遮罩移除。
-        clearInterval(maskGuard);
-        let guardTicks = 0;
-        maskGuard = setInterval(() => {
-          clearAdminMask();
-          if (++guardTicks > 120 || !admin.classList.contains('__show')) clearInterval(maskGuard);
-        }, 250);
+    const closeAdminPanel = () => {
+      const admin = root.querySelector('#twikoo .tk-admin');
+      if (!admin) return;
+      admin.classList.remove('__show');
+      admin.style.display = 'none';
+    };
+
+    const watchAdminOpen = () => {
+      const admin = root.querySelector('#twikoo .tk-admin');
+      if (!admin) return false;
+
+      // × 关闭兜底（只在 Twikoo 自己没关掉时才动手）
+      admin.querySelectorAll('.tk-admin-close').forEach((btn) => {
+        if (btn.dataset.closeBound === '1') return;
+        btn.dataset.closeBound = '1';
+        btn.addEventListener('click', () => {
+          setTimeout(() => {
+            if (admin.classList.contains('__show')) closeAdminPanel();
+          }, 300);
+        });
       });
+
+      if (admin.classList.contains('__show')) {
+        clearAdminMask();
+        const guard = admin.dataset.maskGuard;
+        if (guard !== 'on') {
+          admin.dataset.maskGuard = 'on';
+          let ticks = 0;
+          const timer = setInterval(() => {
+            clearAdminMask();
+            if (++ticks > 120 || !admin.classList.contains('__show')) {
+              clearInterval(timer);
+              delete admin.dataset.maskGuard;
+            }
+          }, 250);
+        }
+      } else {
+        admin.style.display = '';
+      }
+      return true;
     };
 
     // 表单字段的排版必须可靠生效：Twikoo 是运行时注入样式，同权重时会盖掉静态 CSS，
@@ -307,12 +302,12 @@ const configured = Boolean(envId && envId.trim());
         path: root.dataset.commentPath,
         lang: root.dataset.commentLang,
       });
-      bindAdminGesture();
       // 每 250ms 检查一次，最多 40 次（约 10 秒），到位后立即停止。
       let tries = 0;
       const timer = setInterval(() => {
         const placed = layoutForm();
         layoutTitle();
+        watchAdminOpen();
         applyRequiredRule();
         ensureCancelButton();
         cleanExtraLine();
@@ -357,30 +352,6 @@ const configured = Boolean(envId && envId.trim());
   .comments-title { margin: 0 0 16px; font-size: 22px; font-weight: 600; }
   .comments-setup { margin: 0; padding: 15px 17px; border: 1px dashed #d7b69a; border-radius: 8px; background: var(--soft); color: var(--muted); font: 14px/1.7 system-ui, sans-serif; }
   .comments-setup code { padding: .12em .35em; background: #fff; font: 13px ui-monospace, monospace; }
-
-  /* 页头中间的管理热区：平时完全隐形，只占位；悬停时浮现淡淡的提示，
-     连点 5 次打开评论管理。占满品牌与导航之间的整片空白。 */
-  .admin-hotspot {
-    flex: 1 1 auto; align-self: stretch; min-height: 32px; margin: 0 12px; padding: 0;
-    display: flex; align-items: center; justify-content: center;
-    border: 0; background: transparent; color: transparent; font: 12px system-ui, sans-serif;
-    cursor: default; -webkit-tap-highlight-color: transparent;
-  }
-  .admin-hotspot::after {
-    width: 6px; height: 6px; border-radius: 50%; background: #e6ddd0;
-    content: ''; transition: background .15s;
-  }
-  .admin-hotspot:hover::after { background: #d7b69a; }
-  .admin-hotspot:hover { color: var(--muted); }
-  .admin-hotspot[data-tip="1"]::before {
-    margin-right: 8px; color: var(--muted); font-size: 12px;
-    content: '连点 5 次管理评论区';
-  }
-  .admin-hotspot[data-hits="1"]::after,
-  .admin-hotspot[data-hits="2"]::after,
-  .admin-hotspot[data-hits="3"]::after,
-  .admin-hotspot[data-hits="4"]::after { background: var(--accent); transform: scale(1.4); }
-  @media (max-width: 700px) { .admin-hotspot { display: none; } }
 
   /* Twikoo 自带样式是通用蓝紫配色，这里整体调成站点的暖纸配色。 */
   .comments :global(.twikoo) { font-family: 'LXGW WenKai GB', 'Klee One', 'KaiTi', serif; }
