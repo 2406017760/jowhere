@@ -2,7 +2,7 @@
 title: AI Harness学习
 description: AI Harness的入门和学习。
 pubDate: 2026-10-01
-tags: [AI学习]
+tags: [技术, AI]
 ---
 
 
