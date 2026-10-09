@@ -18,27 +18,23 @@ tags: [技术, AI]
 1. 优化问题
 - 多查询策略 Multi-Query
 - 多查询结果融合 RAG-Fusion：
-'''
-1. 生成多个查询
-2. 并行检索
-3. 使用RRF算法融合结果
-4. 返回重新排序的Top-K文档
-'''
-2. 问题分解策略
+  1. 生成多个查询
+  2. 并行检索
+  3. 使用RRF算法融合结果
+  4. 返回重新排序的Top-K文档
+
+
+2. 问题分解策略  
 顺序分解，并行分解，层次分解
-3. step back问答回退
-4. HyDE 用假答案区匹配真答案（优缺点
-5. 路由优化（逻辑路由，语义路由
-6. 问题构建策略（变成数据库语言检索
+1. step back问答回退
+2. HyDE 用假答案区匹配真答案（优缺点
+3. 路由优化（逻辑路由，语义路由
+4. 问题构建策略（变成数据库语言检索
 #### 离线阶段 - 索引生成优化
 
-Multi-representation	  
-
-
-
-RAPTOR	
-
-  ColBERT
+1. Multi-representation
+2. RAPTOR
+3. ColBERT
 
 #### 在线阶段 - 检索优化
 
@@ -47,25 +43,23 @@ RAPTOR
 3. Adaptive Retrieval（自适应检索）：根据查询特征动态调整检索策略
 
 #### 生成 - 优化
-CRAG
+CRAG  
+Self-RAG
 
-
- Self-RAG
-
-Agent
-
-
-
-LangChain
+## Agent
 
 
 
-LangGraph
+## LangChain
 
 
 
-Transformer
+## LangGraph
 
 
 
-Harness
+## Transformer
+
+
+
+## Harness
