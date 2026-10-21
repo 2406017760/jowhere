@@ -146,14 +146,16 @@ Workflow 比 chain 更宽，是带分支、条件、并行、人工节点的流�
 目标与任务理解模块，规划/决策模块，工具/动作执行模块，记忆/状态模块，输出与校验模块
 
 3. ReAct执行流程
----
-React|thought -- action -- observation循环 优点：灵活，走一步看一步
-plan-and-execute|适合流程长，且子任务存在依赖
-Reflexion|自我纠错反思，在上面基础加一层复盘，下一次尝试规避
-Tree-of-Thought|展开多个推理后择优，适合复杂规划任务
-DAG|一次生成完整的工具依赖图，可并行token，成本低
 
-4. Function calling作用
+| 方式 | 介绍 |
+| --- | --- |
+|React|thought -- action -- observation循环 优点：灵活，走一步看一步|
+|plan-and-execute|适合流程长，且子任务存在依赖|
+|Reflexion|自我纠错反思，在上面基础加一层复盘，下一次尝试规避|
+|Tree-of-Thought|展开多个推理后择优，适合复杂规划任务|
+|DAG|一次生成完整的工具依赖图，可并行token，成本低|
+
+1. Function calling作用
 
 让模型从"只会生成文本"变成"能结构化的表达要调什么工具、传什么参数"，但执行本身不在模型里
 
