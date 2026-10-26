@@ -3,6 +3,8 @@ import Search from '../components/Search.astro';
 interface Props { title?: string; description?: string; }
 const { title = '纸上花园', description = '记录思考、生活与正在发生的事。' } = Astro.props;
 const path = Astro.url.pathname;
+// 站点主域名由 astro.config.mjs 的 site 决定；无论从哪个域名访问，都声明同一个规范地址
+const canonical = new URL(path, Astro.site ?? 'https://blog.jowhere.cn').href;
 ---
 <!doctype html>
 <html lang="zh-CN">
@@ -10,6 +12,7 @@ const path = Astro.url.pathname;
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E✦%3C/text%3E%3C/svg%3E" />
     <title>{title === '纸上花园' ? title : `${title} · 纸上花园`}</title>
   </head>
